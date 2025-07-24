@@ -1,21 +1,51 @@
-# Led
+# LED
 
-**TODO: Add description**
+Control one or more LEDs or relays using [Circuits.GPIO](https://hexdocs.pm/circuits_gpio/).
+
+## Features
+
+- Simple `on/1`, `off/1`, `set/2` API
+- Supports multiple LEDs via named GenServers
+- Blinking with optional interval and count
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `led` to your list of dependencies in `mix.exs`:
+Add to your `mix.exs`:
 
-```elixir
-def deps do
-  [
-    {:led, "~> 0.1.0"}
-  ]
-end
-```
+    def deps do
+      [
+        {:led, github: "yourname/led"}
+      ]
+    end
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/led>.
+## Usage
+
+### Start an LED
+
+    {:ok, _pid} = LED.start_link(gpio_pin: 22)
+
+### Turn it on or off
+
+    LED.on()
+    LED.off()
+
+### set state
+
+    LED.set(0)
+    LED.set(1)
+
+## Multiple LEDs
+
+### Start an LED
+
+    {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: 22, initial_value: 0)
+
+### Turn it on or off
+
+    LED.on(:green_led)
+    LED.off(:green_led)
+
+### set state
+
+    LED.set(0, :green_led)
 
