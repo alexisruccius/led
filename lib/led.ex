@@ -34,9 +34,23 @@ defmodule LED do
   def on(), do: set(1)
 
   @doc """
+  Turns LED on.
+
+  `name` is the GenServer process name set in `start_link/1`.
+  """
+  def on(name), do: set(1, name)
+
+  @doc """
   Turns LED off.
   """
   def off(), do: set(0)
+
+  @doc """
+  Turns LED off.
+
+  `name` is the GenServer process name set in `start_link/1`.
+  """
+  def off(name), do: set(0, name)
 
   @doc """
   Sets blinking to 2 Hz (250ms interval).
@@ -58,8 +72,8 @@ defmodule LED do
   @doc """
   Sets LED state to `1` (on) or `0` (off).
   """
-  def set(state) do
-    GenServer.cast(__MODULE__, {:set, state})
+  def set(state, name \\ __MODULE__) do
+    GenServer.cast(name, {:set, state})
   end
 
   # server callbacks

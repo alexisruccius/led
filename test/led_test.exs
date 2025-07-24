@@ -37,6 +37,15 @@ defmodule LEDTest do
     end
   end
 
+  describe "set/2" do
+    test "sets gpio led pin to 0 with custom GenServer name" do
+      start_link_supervised!({LED, gpio_pin: 23, name: :led_green})
+      LED.set(1, :led_green)
+      LED.set(0, :led_green)
+      assert %LED{state: 0} = :sys.get_state(:led_green)
+    end
+  end
+
   describe "on/0" do
     test "sets gpio led pin to 1" do
       LED.on()
@@ -44,10 +53,28 @@ defmodule LEDTest do
     end
   end
 
+  describe "on/1" do
+    test "sets gpio led pin to 1 with custom GenServer name" do
+      start_link_supervised!({LED, gpio_pin: 23, name: :led_red})
+      LED.set(0, :led_red)
+      LED.on(:led_red)
+      assert %LED{state: 1} = :sys.get_state(:led_red)
+    end
+  end
+
   describe "off/0" do
     test "sets gpio led pin to 0" do
       LED.off()
       assert %LED{state: 0} = :sys.get_state(LED)
+    end
+  end
+
+  describe "off/1" do
+    test "sets gpio led pin to 0 with custom GenServer name" do
+      start_link_supervised!({LED, gpio_pin: 23, name: :led_blue})
+      LED.set(1, :led_blue)
+      LED.off(:led_blue)
+      assert %LED{state: 0} = :sys.get_state(:led_blue)
     end
   end
 
