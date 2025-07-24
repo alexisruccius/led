@@ -78,6 +78,18 @@ defmodule LEDTest do
     end
   end
 
+  describe "is_lit?/0" do
+    test "returns true if LED state is 1 (on)" do
+      LED.set(1)
+      assert LED.is_lit?()
+    end
+
+    test "returns false if LED state is 0 (off)" do
+      LED.set(0)
+      refute LED.is_lit?()
+    end
+  end
+
   describe "blinking/0" do
     test "sets gpio led to blinking at 2 Hz" do
       start_link_supervised!(Timer)

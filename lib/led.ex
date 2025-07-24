@@ -53,6 +53,16 @@ defmodule LED do
   def off(name), do: set(0, name)
 
   @doc """
+  Checks if the LED is lit.
+
+  Returns true, when LED state == 1, false otherwise.
+  """
+  def is_lit?() do
+    %LED{state: state} = :sys.get_state(__MODULE__)
+    state == 1
+  end
+
+  @doc """
   Sets blinking to 2 Hz (250ms interval).
   """
   defdelegate blinking, to: Timer
