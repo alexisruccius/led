@@ -4,9 +4,25 @@ defmodule LEDTest do
   alias LED.Timer
 
   setup_all do
-    # note: GPIO is simulated via CircuitsSim, cf. config/test.exs
+    # note: GPIO is simulated via CircuitsSim on gpio_pin 23, cf. config/test.exs
     start_supervised!({LED, gpio_pin: 23})
     :ok
+  end
+
+  describe "start_link/1" do
+    test "sets GenServer name" do
+      start_supervised!({LED, gpio_pin: 23, name: :second_led})
+      assert %LED{} = :sys.get_state(:second_led)
+    end
+
+    test "sets gpio_pin" do
+      assert %LED{gpio_pin: 23} = :sys.get_state(LED)
+    end
+
+    test "sets inital_value of LED state" do
+      start_supervised!({LED, gpio_pin: 23, name: :third_led, initial_value: 0})
+      assert %LED{state: 0} = :sys.get_state(:third_led)
+    end
   end
 
   describe "set/1" do

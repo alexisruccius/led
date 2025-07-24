@@ -14,6 +14,15 @@ defmodule LED do
 
   alias LED.Timer
 
+  @doc """
+  Start LED GenServer.
+
+  `init_args` can be
+
+  - `name` for the GenServer process name,
+  - `gpio_pin` for the gpio_pin to use, defaults to `22`,
+  - `initial_value` inital state of the LED: `0` for `off`, `1` for `on`; defaults to `1`.
+  """
   def start_link(init_args \\ []) do
     name = Keyword.get(init_args, :name, __MODULE__)
     GenServer.start_link(__MODULE__, init_args, name: name)
@@ -58,8 +67,10 @@ defmodule LED do
   @impl true
   def init(init_args) do
     gpio_pin = Keyword.get(init_args, :gpio_pin, @gpio_pin)
-    {:ok, output_ref} = GPIO.open(gpio_pin, :output, initial_value: @initial_value)
-    {:ok, %__MODULE__{gpio_pin: gpio_pin, output_ref: output_ref, state: @initial_value}}
+    initial_value = Keyword.get(init_args, :initial_value, @initial_value)
+
+    {:ok, output_ref} = GPIO.open(gpio_pin, :output, initial_value: initial_value)
+    {:ok, %__MODULE__{gpio_pin: gpio_pin, output_ref: output_ref, state: initial_value}}
   end
 
   @impl true
