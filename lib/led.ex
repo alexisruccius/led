@@ -30,27 +30,34 @@ defmodule LED do
 
   @doc """
   Turns LED on.
-  """
-  def on(), do: set(1)
-
-  @doc """
-  Turns LED on.
 
   `name` is the GenServer process name set in `start_link/1`.
+  Defaults to module name.
+
+  ## Examples
+
+      iex> LED.on()
+
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_green)
+      iex> LED.on(:led_green)
   """
-  def on(name), do: set(1, name)
+  def on(name \\ __MODULE__), do: set(1, name)
+
 
   @doc """
   Turns LED off.
-  """
-  def off(), do: set(0)
-
-  @doc """
-  Turns LED off.
 
   `name` is the GenServer process name set in `start_link/1`.
+  Defaults to module name.
+
+  ## Examples
+
+      iex> LED.off()
+
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_yellow)
+      iex> LED.off(:led_yellow)
   """
-  def off(name), do: set(0, name)
+  def off(name \\ __MODULE__), do: set(0, name)
 
   @doc """
   Checks if the LED is lit.
@@ -101,6 +108,18 @@ defmodule LED do
 
   @doc """
   Sets LED state to `1` (on) or `0` (off).
+
+  `name` is the GenServer process name set in `start_link/1`.
+  Defaults to module name.
+
+  ## Examples
+
+      iex> LED.set(0)
+      iex> LED.set(1)
+
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_red)
+      iex> LED.set(0, :led_red)
+      iex> LED.set(1, :led_red)
   """
   def set(state, name \\ __MODULE__) do
     GenServer.cast(name, {:set, state})
