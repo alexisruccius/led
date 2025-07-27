@@ -1,6 +1,8 @@
 defmodule LEDTest do
   use ExUnit.Case
 
+  doctest LED
+
   alias LED.Timer
 
   setup_all do
@@ -87,6 +89,20 @@ defmodule LEDTest do
     test "returns false if LED state is 0 (off)" do
       LED.set(0)
       refute LED.is_lit?()
+    end
+  end
+
+  describe "is_lit?/1" do
+    test "returns true if LED state is 1 (on)" do
+      start_link_supervised!({LED, gpio_pin: 23, name: :led_pink})
+      LED.set(1, :led_pink)
+      assert LED.is_lit?(:led_pink)
+    end
+
+    test "returns false if LED state is 0 (off)" do
+      start_link_supervised!({LED, gpio_pin: 23, name: :led_pink})
+      LED.set(0, :led_pink)
+      refute LED.is_lit?(:led_pink)
     end
   end
 

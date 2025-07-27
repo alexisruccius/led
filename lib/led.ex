@@ -56,9 +56,29 @@ defmodule LED do
   Checks if the LED is lit.
 
   Returns true, when LED state == 1, false otherwise.
+
+  `name` is the GenServer process name set in `start_link/1`.
+  Defaults to module name.
+
+  ## Examples
+
+      iex> LED.on()
+      iex> LED.is_lit?()
+      true
+      iex> LED.off()
+      iex> LED.is_lit?()
+      false
+
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_pink)
+      iex> LED.on(:led_pink)
+      iex> LED.is_lit?(:led_pink)
+      true
+      iex> LED.off(:led_pink)
+      iex> LED.is_lit?(:led_pink)
+      false
   """
-  def is_lit?() do
-    %LED{state: state} = :sys.get_state(__MODULE__)
+  def is_lit?(name \\ __MODULE__) do
+    %LED{state: state} = :sys.get_state(name)
     state == 1
   end
 
