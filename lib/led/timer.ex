@@ -4,6 +4,8 @@ defmodule LED.Timer do
   """
   use GenServer
 
+  require Logger
+
   defstruct timer_ref: nil
 
   def start_link(init_arg) do
@@ -73,6 +75,8 @@ defmodule LED.Timer do
     Process.send_after(self(), message, interval_ms)
   end
 
-  defp cancel_timer(timer_ref) when timer_ref == nil, do: IO.puts("no timer to cancel")
+  defp cancel_timer(timer_ref) when timer_ref == nil,
+    do: Logger.debug("There is no timer to cancel: timer_ref == nil")
+
   defp cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
 end
