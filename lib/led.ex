@@ -7,7 +7,6 @@ defmodule LED do
   @initial_value 1
 
   defstruct gpio_pin: nil, output_ref: nil, state: 0
-  # defstruct gpio_pin: nil, output_ref: nil, state: 0, timer_refs: [], interval: 200
 
   use GenServer
   alias Circuits.GPIO
@@ -32,7 +31,7 @@ defmodule LED do
   Turns LED on.
 
   `name` is the GenServer process name set in `start_link/1`.
-  Defaults to module name.
+  Defaults to the module name.
 
   ## Examples
 
@@ -43,12 +42,11 @@ defmodule LED do
   """
   def on(name \\ __MODULE__), do: set(1, name)
 
-
   @doc """
   Turns LED off.
 
   `name` is the GenServer process name set in `start_link/1`.
-  Defaults to module name.
+  Defaults to the module name.
 
   ## Examples
 
@@ -65,7 +63,7 @@ defmodule LED do
   Returns true, when LED state == 1, false otherwise.
 
   `name` is the GenServer process name set in `start_link/1`.
-  Defaults to module name.
+  Defaults to the module name.
 
   ## Examples
 
@@ -90,27 +88,20 @@ defmodule LED do
   end
 
   @doc """
-  Sets blinking to 2 Hz (250ms interval).
-  """
-  defdelegate blinking, to: Timer
-
-  @doc """
-  Sets blinking to interval in ms.
-  """
-  defdelegate blinking(interval_ms), to: Timer
-
-  @doc """
   Sets blinking to interval in ms and change state n times.
 
-  After n times the LED stays off.
+  `interval_ms`: interval in milliseconds. Defaults to 2 Hz (250ms interval).
+
+  `times`: times to blink. After n times the LED stays off.
+           Defaults to `-1` (infinite/continous).
   """
-  defdelegate blinking(interval_ms, times), to: Timer
+  defdelegate blinking(interval_ms \\ 250, times \\ -1), to: Timer
 
   @doc """
   Sets LED state to `1` (on) or `0` (off).
 
   `name` is the GenServer process name set in `start_link/1`.
-  Defaults to module name.
+  Defaults to the module name.
 
   ## Examples
 
