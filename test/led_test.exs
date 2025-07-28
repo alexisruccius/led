@@ -43,6 +43,18 @@ defmodule LEDTest do
       LED.set(0, :led_green)
       assert %LED{state: 0} = :sys.get_state(:led_green)
     end
+
+    test "timer_refs get canceled when set" do
+      {:ok, _pid} = LED.start_link(name: :test_set, gpio_pin: 23, initial_value: 0)
+
+      LED.blink(name: :test_set)
+      assert %LED{timer_refs: timer_refs} = :sys.get_state(:test_set)
+      assert timer_refs |> List.first() |> is_reference()
+
+      LED.set(1, :test_set)
+      assert %LED{timer_refs: timer_refs} = :sys.get_state(:test_set)
+      refute timer_refs |> List.first() |> is_reference()
+    end
   end
 
   describe "on/0" do
@@ -118,6 +130,18 @@ defmodule LEDTest do
 
       LED.toggle(:test_toggle)
       assert LED.is_lit?(:test_toggle) == false
+    end
+
+    test "timer_refs get canceled whenn toggling" do
+      {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: 23, initial_value: 0)
+
+      LED.blink(name: :test_toggle)
+      assert %LED{timer_refs: timer_refs} = :sys.get_state(:test_toggle)
+      assert timer_refs |> List.first() |> is_reference()
+
+      LED.toggle(:test_toggle)
+      assert %LED{timer_refs: timer_refs} = :sys.get_state(:test_toggle)
+      refute timer_refs |> List.first() |> is_reference()
     end
   end
 

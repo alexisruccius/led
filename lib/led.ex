@@ -229,7 +229,6 @@ defmodule LED do
   @doc since: "0.1.0"
   @spec toggle(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: :ok
   def toggle(name \\ __MODULE__) do
-    cancel_timers()
     if is_lit?(name), do: off(name), else: on(name)
   end
 
@@ -293,7 +292,7 @@ defmodule LED do
     # -1 is infinite blinking
     times = Keyword.get(opts, :times, -1)
 
-    cancel_timers()
+    cancel_timers(name)
     timer_start(interval, times, name)
   end
 
@@ -369,7 +368,7 @@ defmodule LED do
   @doc since: "0.1.0"
   @spec set(any(), atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
   def set(state, name \\ __MODULE__) do
-    cancel_timers()
+    cancel_timers(name)
     GenServer.cast(name, {:set, state})
   end
 
