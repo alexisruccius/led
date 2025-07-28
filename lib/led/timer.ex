@@ -1,82 +1,64 @@
 defmodule LED.Timer do
   @moduledoc """
-  Starts a timer.
+  Timer helper functions for managing LED blinking and repeating patterns.
+
+  Provides mechanisms to send timed messages for blinking intervals,
+  including support for infinite repeats and countdowns.
   """
-  use GenServer
+  @moduledoc since: "0.1.0"
 
   require Logger
 
-  defstruct timer_ref: nil
+  @doc """
+  Schedules the next timer message for LED blinking or repeating patterns.
 
-  def start_link(init_arg) do
-    name = Keyword.get(init_arg, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, init_arg, name: name)
+  - Accepts a tuple `{state, interval, times}` where:
+    - `state` is `0` (off) or `1` (on).
+    - `interval` is the delay in milliseconds before sending the next message.
+    - `times` is the number of remaining toggles; `-1` means infinite repeats.
+
+  - If `times` is `-1`, schedules the timer infinitely.
+  - If `times` is `0`, does nothing (no timer scheduled).
+
+  - If `state` is `0`, decrements `times` and schedules the next timer.
+  - If `state` is `1`, schedules the next timer without decrementing `times`.
+
+  Returns the timer reference or `nil` if no timer is scheduled.
+  """
+  @doc since: "0.1.0"
+  @spec send_timer({0 | 1, integer(), integer()}) :: nil | reference()
+  # -1 means infinite
+  def send_timer({_state, interval, times} = message) when times == -1 do
+    send_after(message, interval)
   end
 
-  def blinking(interval_ms, times, name \\ __MODULE__)
-      when is_integer(interval_ms) and is_integer(times) do
-    cancel()
-    start(interval_ms, times, name)
+  def send_timer({_state, _interval, times}) when times == 0, do: nil
+
+  def send_timer({0, interval, times}) do
+    send_after({0, interval, times - 1}, interval)
+  end
+
+  def send_timer({1, interval, _times} = message) do
+    send_after(message, interval)
+  end
+
+  defp send_after(message, interval) do
+    Process.send_after(self(), message, interval)
   end
 
   @doc """
-  Start timer.
+  Cancels a list of timer references to stop scheduled timer messages.
 
-  `interval_ms`: interval in milliseconds.
-
-  `times`: times to blink.  `-1` means infinite/continous.
+  - `timer_refs` is a list of references returned by `Process.send_after/3`.
+  - If a `nil` timer_ref is encountered, logs a debug message and skips cancellation.
   """
-  def start(interval_ms, times \\ -1, name \\ __MODULE__),
-    do: GenServer.cast(name, {:start, interval_ms, times})
+  @doc since: "0.1.0"
+  @spec cancel(list(reference())) :: list()
+  def cancel(timer_refs), do: Enum.map(timer_refs, &cancel_ref/1)
 
-  def cancel(name \\ __MODULE__), do: GenServer.cast(name, :cancel)
-
-  # server callbacks
-
-  @impl true
-  def init(_init_arg), do: {:ok, %__MODULE__{}}
-
-  def handle_cast({:start, interval_ms, times}, %__MODULE__{} = timer) do
-    LED.on()
-    {:noreply, timer |> struct!(timer_ref: send_timer({:off, interval_ms, times}))}
+  defp cancel_ref(timer_ref) when timer_ref == nil do
+    Logger.debug("There is no timer to cancel: timer_ref == nil")
   end
 
-  @impl true
-  def handle_cast(:cancel, %__MODULE__{} = timer) do
-    cancel_timer(timer.timer_ref)
-    {:noreply, timer |> struct!(timer_ref: nil)}
-  end
-
-  @impl true
-  def handle_info({:off, interval_ms, times}, %__MODULE__{} = timer) do
-    LED.off()
-    {:noreply, timer |> struct!(timer_ref: send_timer({:on, interval_ms, times}))}
-  end
-
-  def handle_info({:on, interval_ms, times}, %__MODULE__{} = timer) do
-    LED.on()
-    {:noreply, timer |> struct!(timer_ref: send_timer({:off, interval_ms, times}))}
-  end
-
-  # -1 means infinite
-  defp send_timer({_, interval_ms, times} = message) when times == -1 do
-    send_after(message, interval_ms)
-  end
-
-  defp send_timer({_, _, times}) when times == 0, do: nil
-
-  defp send_timer({:off, interval_ms, times}) do
-    send_after({:off, interval_ms, times - 1}, interval_ms)
-  end
-
-  defp send_timer({:on, interval_ms, _times} = message), do: send_after(message, interval_ms)
-
-  defp send_after(message, interval_ms) do
-    Process.send_after(self(), message, interval_ms)
-  end
-
-  defp cancel_timer(timer_ref) when timer_ref == nil,
-    do: Logger.debug("There is no timer to cancel: timer_ref == nil")
-
-  defp cancel_timer(timer_ref), do: Process.cancel_timer(timer_ref)
+  defp cancel_ref(timer_ref), do: Process.cancel_timer(timer_ref)
 end

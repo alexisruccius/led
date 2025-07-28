@@ -3,23 +3,58 @@ defmodule LED.TimerTest do
 
   alias LED.Timer
 
-  setup_all do
-    start_link_supervised!(Timer)
-    :ok
-  end
+  describe "send_timer/1" do
+    test "when times == 0 do not start a timer" do
+      state = 1
+      interval = 250
+      timer = 0
+      assert Timer.send_timer({state, interval, timer}) |> is_nil()
+    end
 
-  describe "start_link/1" do
-    test "sets GenServer name" do
-      start_supervised!({Timer, name: :green_led_timer})
-      assert %Timer{} = :sys.get_state(:green_led_timer)
+    test "when times == -1 sends message without modifying" do
+      state = 1
+      interval = 16
+      timer = -1
+      assert Timer.send_timer({state, interval, timer})
+      assert_receive {1, 16, -1}, 20
+    end
+
+    test "off message (0) sends modified message times - 1" do
+      state = 0
+      interval = 16
+      timer = 9
+      assert Timer.send_timer({state, interval, timer})
+      assert_receive {0, 16, 8}, 20
+    end
+
+    test "on message (0) sends message without modifying times" do
+      state = 1
+      interval = 16
+      timer = 6
+      assert Timer.send_timer({state, interval, timer})
+      assert_receive {1, 16, 6}, 20
     end
   end
 
-  describe "start/1" do
-    test "timer_ref is present" do
-      Timer.start(250)
-      assert %Timer{timer_ref: timer_ref} = :sys.get_state(Timer)
-      assert is_reference(timer_ref)
+  describe "cancel_/1" do
+    test "cancels all timers in a list" do
+      test1_ref = Process.send_after(self(), :test1, 20)
+      test2_ref = Process.send_after(self(), :test2, 16)
+      test3_ref = Process.send_after(self(), :test3, 0)
+
+      assert test1_ref |> is_reference()
+      assert test2_ref |> is_reference()
+      assert test3_ref |> is_reference()
+
+      timer_refs = [test1_ref, test2_ref, test3_ref]
+
+      [a, b, c] = Timer.cancel(timer_refs)
+      refute is_reference(a)
+      refute is_reference(b)
+      refute is_reference(c)
+      assert is_integer(a) or a == false
+      assert is_integer(b) or b == false
+      assert is_integer(c) or c == false
     end
   end
 end

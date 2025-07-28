@@ -7,5 +7,6 @@ config :circuits_gpio, default_backend: CircuitsSim.GPIO.Backend
 config :circuits_sim,
   config: [
     {CircuitsSim.Device.GPIOLED, gpio_spec: 22},
-    {CircuitsSim.Device.GPIOLED, gpio_spec: 23}
+    {CircuitsSim.Device.GPIOLED, gpio_spec: 23},
+    {CircuitsSim.Device.GPIOLED, gpio_spec: 24}
   ]

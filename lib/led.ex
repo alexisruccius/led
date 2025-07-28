@@ -1,72 +1,247 @@
 defmodule LED do
   @moduledoc """
-  GenServer for controlling a LED or relay.
+  Control LEDs or relays. A simple library with some artful gimmicks.
+
+  This library is a simple, convenient wrapper around [Circuits.GPIO](https://hexdocs.pm/circuits_gpio/)
+  for controlling LEDs or relays. Beyond basic on/off control, it enables artful, experimental,
+  and even random noise light effects through overlapping repeating patterns — offering creative flexibility.
+
+  ## ✨ Features
+
+  - ⚡ Control single LEDs or relays on GPIO pins
+  - ✔ Easy on/off control
+  - ⏰ Blink and repeat patterns with configurable intervals and counts
+  - 💡 Toggle LED state
+  - 🎛️ Optional named LED processes for multiple devices
+  - Supports overlapping repeat patterns for creative effects
+  - Defaults to GPIO pin `22` with LED initially on
+
+  ## Installation
+
+  Add to your `mix.exs`:
+
+  ```elixir
+  def deps do
+    [
+      {:led, "~> 0.1.0"}
+    ]
+  end
+  ```
+
+  ## 🛠 Usage
+
+  ### Start an LED
+
+  * Default (gpio_pin: 22, initially on):
+
+  ```elixir
+  {:ok, _pid} = LED.start_link()
+  ```
+
+  * Named (gpio_pin: 23, initially off):
+
+  ```elixir
+  {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: 23, initial_value: 0)
+  ```
+
+  ### Turn it on or off
+
+  * Default:
+
+  ```elixir
+  LED.on()
+  LED.off()
+  ```
+  * Named:
+
+  ```elixir
+  LED.on(:green_led)
+  LED.off(:green_led)
+  ```
+
+  ### Toggle LED
+
+  ```elixir
+  LED.toggle()
+  LED.toggle(:green_led)
+  ```
+
+  ### Set state directly
+
+  ```elixir
+  LED.set(0, :green_led)  # Off
+  LED.set(1, :green_led)  # On
+  ```
+  ### ⏰ Blink LED
+
+  * Blink indefinitely at 2 Hz (250ms interval):
+
+  ```elixir
+  LED.blink()
+  LED.blink(name: :green_led)
+  ```
+
+  * Blink LED on default/`:green_led` 10 times, toggling every 500 ms:
+
+  ```elixir
+  LED.blink(interval: 500, times: 10)
+  LED.blink(name: :green_led, interval: 500, times: 10)
+  ```
+
+  ### Repeat blinking (overlapping allowed)
+
+  * Start a repeating blink pattern on default/`:green_led` every 300 ms indefinitely:
+
+  ```elixir
+  LED.repeat(interval: 300)
+  LED.repeat(name: :green_led, interval: 300)
+  ```
+  * Overlay multiple blinking patterns (polyrhythmic effect):
+
+  ```elixir
+  LED.repeat(interval: 400, times: 5)
+  LED.repeat(interval: 700, times: 3)
+  LED.repeat(name: :green_led, interval: 400, times: 5)
+  LED.repeat(name: :green_led, interval: 700, times: 3)
+  ```
+  ### Cancel blinking timers
+
+  Stop all blinking/repeating timers on default/`:green_led`:
+
+  ```elixir
+  LED.cancel_timers()
+  LED.cancel_timers(:green_led)
+  ```
+
+    > #### Note on use with relay {: .tip}
+    > When using a relay, check its datasheet
+    > for minimum switch times to avoid damage or malfunction.
   """
+  @moduledoc since: "0.1.0"
 
   @gpio_pin 22
   @initial_value 1
 
-  defstruct gpio_pin: nil, output_ref: nil, state: 0
+  defstruct name: nil, gpio_pin: nil, output_ref: nil, state: 0, timer_refs: []
 
   use GenServer
   alias Circuits.GPIO
 
+  require Logger
+
   alias LED.Timer
 
   @doc """
-  Start LED GenServer.
+  Starts the LED GenServer.
 
-  `init_args` can be
+  Accepts keyword arguments in `init_args` to configure the LED:
 
-  - `name` for the GenServer process name,
-  - `gpio_pin` for the gpio_pin to use, defaults to `22`,
-  - `initial_value` inital state of the LED: `0` for `off`, `1` for `on`; defaults to `1`.
+    * `:name` – (atom) Optional name for the GenServer (used for referencing multiple LEDs)
+    * `:gpio_pin` – (integer) GPIO pin to control; defaults to `22`
+    * `:initial_value` – (0 or 1) Initial LED state; `0` = off, `1` = on (default: `1`)
+
+  ## Examples
+
+  Start the default LED:
+
+      iex> {:ok, _pid} = LED.start_link()
+
+  Start a named LED on pin 23, initially off.
+  You can control it with:
+
+      iex> {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: 23, initial_value: 0)
+      iex> LED.on(:green_led)
+      iex> LED.is_lit?(:green_led)
+      true
   """
+  @doc since: "0.1.0"
+  @spec start_link(keyword()) :: :ignore | {:error, any()} | {:ok, pid()}
   def start_link(init_args \\ []) do
     name = Keyword.get(init_args, :name, __MODULE__)
     GenServer.start_link(__MODULE__, init_args, name: name)
   end
 
   @doc """
-  Turns LED on.
+  Turns the LED on by setting its GPIO state to `1`.
 
-  `name` is the GenServer process name set in `start_link/1`.
-  Defaults to the module name.
+  Accepts an optional `name` argument to control a specific LED process started
+  with `start_link/1`. If no `name` is given, the default module name is used.
+
+  Calling this will cancel any active blinking or repeat timers before switching
+  the LED on.
 
   ## Examples
 
+  Turn on the default LED (GPIO pin 22):
+
       iex> LED.on()
+
+  Start and turn on a named LED on GPIO pin 23:
 
       iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_green)
       iex> LED.on(:led_green)
   """
+  @doc since: "0.1.0"
+  @spec on(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
   def on(name \\ __MODULE__), do: set(1, name)
 
   @doc """
-  Turns LED off.
+  Turns the LED off by setting its GPIO state to `0`.
 
-  `name` is the GenServer process name set in `start_link/1`.
-  Defaults to the module name.
+  Accepts an optional `name` argument to control a specific LED process started
+  with `start_link/1`. If no `name` is given, the default module name is used.
+
+  Calling this will cancel any active blinking or repeat timers before switching
+  the LED off.
 
   ## Examples
 
+  Turn off the default LED (GPIO pin 22):
+
       iex> LED.off()
+
+  Start and turn off a named LED on GPIO pin 23:
 
       iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_yellow)
       iex> LED.off(:led_yellow)
   """
+  @doc since: "0.1.0"
+  @spec off(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
   def off(name \\ __MODULE__), do: set(0, name)
 
   @doc """
-  Checks if the LED is lit.
+  Toggles the LED: turns it off if on, and on if off.
 
-  Returns true, when LED state == 1, false otherwise.
+  ## Examples
 
-  `name` is the GenServer process name set in `start_link/1`.
+      iex> {:ok, _pid} = LED.start_link()
+      iex> LED.on()
+      iex> LED.toggle()
+      iex> LED.is_lit?()
+      false
+
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :green_led)
+      iex> LED.off(:green_led)
+      iex> LED.toggle(:green_led)
+      iex> LED.is_lit?(:green_led)
+      true
+  """
+  @doc since: "0.1.0"
+  @spec toggle(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: :ok
+  def toggle(name \\ __MODULE__) do
+    cancel_timers()
+    if is_lit?(name), do: off(name), else: on(name)
+  end
+
+  @doc """
+  Returns `true` if the LED is currently on (`state == 1`), otherwise returns `false`.
+
+  Accepts an optional `name` argument for the GenServer process name set via `start_link/1`.
   Defaults to the module name.
 
   ## Examples
 
+      iex> {:ok, _pid} = LED.start_link()
       iex> LED.on()
       iex> LED.is_lit?()
       true
@@ -82,54 +257,218 @@ defmodule LED do
       iex> LED.is_lit?(:led_pink)
       false
   """
+  @spec is_lit?(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: boolean()
+  @doc since: "0.1.0"
   def is_lit?(name \\ __MODULE__) do
     %LED{state: state} = :sys.get_state(name)
     state == 1
   end
 
   @doc """
-  Sets blinking to interval in ms and change state n times.
+  Starts or updates regular blinking for the LED.
 
-  `interval_ms`: interval in milliseconds. Defaults to 2 Hz (250ms interval).
+  Accepts keyword options:
 
-  `times`: times to blink. After n times the LED stays off.
-           Defaults to `-1` (infinite/continous).
-  """
-  defdelegate blinking(interval_ms \\ 250, times \\ -1), to: Timer
+    * `:name` – (atom) GenServer name of the LED. Defaults to the module name.
+    * `:interval` – (integer) Blink interval in milliseconds. Default is `250` (≈2 Hz).
+    * `:times` – (integer) Number of blinks. Default is `-1` for continuous blinking.
 
-  @doc """
-  Sets LED state to `1` (on) or `0` (off).
+  This will cancel any existing blinking or repeat timers before starting.
 
-  `name` is the GenServer process name set in `start_link/1`.
-  Defaults to the module name.
+  Use `repeat/1` instead for experimental or overlapping blink patterns.
 
   ## Examples
 
+      iex> LED.blink()
+      :ok
+
+      iex> LED.blink(name: :green_led, interval: 500, times: 10)
+      :ok
+  """
+  @doc since: "0.1.0"
+  @spec blink(keyword()) :: :ok
+  def blink(opts \\ []) do
+    name = Keyword.get(opts, :name, __MODULE__)
+    interval = Keyword.get(opts, :interval, 250)
+    # -1 is infinite blinking
+    times = Keyword.get(opts, :times, -1)
+
+    cancel_timers()
+    timer_start(interval, times, name)
+  end
+
+  @doc """
+  Starts a repeating blink pattern on the LED.
+
+  Unlike `blink/1`, this function allows multiple overlapping patterns,
+  enabling experimental or polyrhythmic effects. Each call creates a new
+  timer without cancelling existing ones.
+
+  Can be manually canceled using `cancel_timers/1`.
+
+  Useful for creative setups or layered visual rhythms. For best visibility,
+  use intervals greater than 10ms.
+
+  ## Options
+
+    * `:name` – (atom) GenServer name of the LED. Defaults to the module name.
+    * `:interval` – (integer) Interval in milliseconds between toggles. Default: `250` (≈2 Hz).
+    * `:times` – (integer) Number of blinks. `-1` means infinite. Default: `-1`.
+
+  If you want predictable, single-pattern blinking, use `blink/1` instead.
+
+  ## Examples
+
+      iex> LED.repeat()
+      :ok
+      iex> LED.repeat(interval: 969)
+      :ok
+      iex> LED.cancel_timers()
+
+      iex> LED.repeat(name: :green_led, interval: 900)
+      :ok
+      iex> LED.repeat(name: :green_led, interval: 690)
+      :ok
+      iex> LED.cancel_timers(:green_led)
+  """
+  @doc since: "0.1.0"
+  @spec repeat(keyword()) :: :ok
+  def repeat(opts \\ []) do
+    name = Keyword.get(opts, :name, __MODULE__)
+    interval = Keyword.get(opts, :interval, 250)
+    # -1 is infinite blinking
+    times = Keyword.get(opts, :times, -1)
+
+    timer_start(interval, times, name)
+  end
+
+  # client casts
+
+  @doc """
+  Sets the LED to a specific state: `1` for **on**, `0` for **off**.
+
+  Any active blinking or repeat timers will be canceled before setting the state,
+  ensuring full manual control.
+
+  Accepts an optional `name` argument to target a specific LED GenServer.
+  If omitted, it uses the default module name.
+
+  ## Examples
+
+  Turn off and on the default LED:
+
       iex> LED.set(0)
       iex> LED.set(1)
+
+  Control a named LED:
 
       iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_red)
       iex> LED.set(0, :led_red)
       iex> LED.set(1, :led_red)
   """
+  @doc since: "0.1.0"
+  @spec set(any(), atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
   def set(state, name \\ __MODULE__) do
+    cancel_timers()
     GenServer.cast(name, {:set, state})
   end
+
+  @doc """
+  Starts a blinking timer that toggles the LED at a given interval and for a
+  given number of times.
+
+  - `interval` – blinking interval in milliseconds.
+  - `times` – how often to toggle the LED. Use `-1` for infinite blinking.
+
+  Use `cancel_timers/1` to stop the blinking manually.
+
+  ## Examples
+
+  Blink the default LED continuously every 200ms:
+
+      iex> LED.timer_start(200, -1)
+
+  Blink a named LED 5 times every 300ms:
+
+      iex> LED.timer_start(300, 5, :led_blue)
+  """
+  @doc since: "0.1.0"
+  @spec timer_start(
+          integer(),
+          integer(),
+          atom() | pid() | {atom(), any()} | {:via, atom(), any()}
+        ) :: :ok
+  def timer_start(interval, times \\ -1, name \\ __MODULE__) do
+    GenServer.cast(name, {:timer_start, interval, times})
+  end
+
+  @doc """
+  Cancels all active timers associated with the LED process.
+
+  This stops any ongoing `blink/1` or `repeat/1` patterns by clearing all stored
+  `timer_refs`. Use this to reset the LED's timing behavior before issuing new
+  commands.
+
+  `name` – (optional) the GenServer name of the LED; defaults to the module.
+
+  ## Examples
+
+      iex> LED.cancel_timers()
+
+      iex> LED.cancel_timers(:led_green)
+  """
+  @doc since: "0.1.0"
+  @spec cancel_timers(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
+  def cancel_timers(name \\ __MODULE__), do: GenServer.cast(name, :cancel_timers)
 
   # server callbacks
 
   @impl true
   def init(init_args) do
+    name = Keyword.get(init_args, :name, __MODULE__)
     gpio_pin = Keyword.get(init_args, :gpio_pin, @gpio_pin)
     initial_value = Keyword.get(init_args, :initial_value, @initial_value)
 
     {:ok, output_ref} = GPIO.open(gpio_pin, :output, initial_value: initial_value)
-    {:ok, %__MODULE__{gpio_pin: gpio_pin, output_ref: output_ref, state: initial_value}}
+
+    {:ok,
+     %__MODULE__{name: name, gpio_pin: gpio_pin, output_ref: output_ref, state: initial_value}}
   end
 
   @impl true
   def handle_cast({:set, state}, %__MODULE__{} = led) do
+    {:noreply, led |> struct!(state: write_gpio(led, state))}
+  end
+
+  ## timer -> blinking, repeating
+
+  @impl true
+  def handle_cast({:timer_start, interval, times}, %__MODULE__{} = led) do
+    timer_refs = send_timer(1, interval, times, led.timer_refs)
+    state = write_gpio(led, 1)
+    {:noreply, led |> struct!(timer_refs: timer_refs, state: state)}
+  end
+
+  @impl true
+  def handle_cast(:cancel_timers, %__MODULE__{} = led) do
+    Timer.cancel(led.timer_refs)
+    {:noreply, led |> struct!(timer_refs: [])}
+  end
+
+  @impl true
+  def handle_info({state, interval, times}, %__MODULE__{} = led) do
+    timer_refs = send_timer(state, interval, times, led.timer_refs)
+    state = write_gpio(led, state)
+    {:noreply, led |> struct!(timer_refs: timer_refs, state: state)}
+  end
+
+  defp write_gpio(led, state) do
     :ok = GPIO.write(led.output_ref, state)
-    {:noreply, led |> struct!(state: state)}
+    Logger.debug("LED #{led.name} state #{state}")
+    state
+  end
+
+  defp send_timer(state, interval, times, timer_refs) do
+    [Timer.send_timer({1 - state, interval, times}) | timer_refs]
   end
 end

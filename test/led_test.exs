@@ -1,15 +1,9 @@
 defmodule LEDTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true, group: :led_tests
 
   doctest LED
 
-  alias LED.Timer
-
-  setup_all do
-    # note: GPIO is simulated via CircuitsSim on gpio_pin 23, cf. config/test.exs
-    start_supervised!({LED, gpio_pin: 22})
-    :ok
-  end
+  # note: GPIO is simulated via CircuitsSim, cf. config/test.exs
 
   describe "start_link/1" do
     test "sets GenServer name" do
@@ -30,11 +24,13 @@ defmodule LEDTest do
 
   describe "set/1" do
     test "sets gpio led pin to 1" do
+      start_supervised!(LED)
       LED.set(1)
       assert %LED{state: 1} = :sys.get_state(LED)
     end
 
     test "sets gpio led pin to 0" do
+      start_supervised!(LED)
       LED.set(0)
       assert %LED{state: 0} = :sys.get_state(LED)
     end
@@ -51,6 +47,7 @@ defmodule LEDTest do
 
   describe "on/0" do
     test "sets gpio led pin to 1" do
+      start_supervised!(LED)
       LED.on()
       assert %LED{state: 1} = :sys.get_state(LED)
     end
@@ -67,6 +64,7 @@ defmodule LEDTest do
 
   describe "off/0" do
     test "sets gpio led pin to 0" do
+      start_supervised!(LED)
       LED.off()
       assert %LED{state: 0} = :sys.get_state(LED)
     end
@@ -83,11 +81,13 @@ defmodule LEDTest do
 
   describe "is_lit?/0" do
     test "returns true if LED state is 1 (on)" do
+      start_supervised!(LED)
       LED.set(1)
       assert LED.is_lit?()
     end
 
     test "returns false if LED state is 0 (off)" do
+      start_supervised!(LED)
       LED.set(0)
       refute LED.is_lit?()
     end
@@ -107,12 +107,26 @@ defmodule LEDTest do
     end
   end
 
-  describe "blinking/0" do
+  describe "toggle/1" do
+    test "toggles LED state on and off" do
+      {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: 23, initial_value: 0)
+
+      assert LED.is_lit?(:test_toggle) == false
+
+      LED.toggle(:test_toggle)
+      assert LED.is_lit?(:test_toggle) == true
+
+      LED.toggle(:test_toggle)
+      assert LED.is_lit?(:test_toggle) == false
+    end
+  end
+
+  describe "blink/0" do
     test "sets gpio led to blinking at 2 Hz" do
-      start_link_supervised!(Timer)
+      start_supervised!(LED)
 
       # 2 Hz is a interval of 250ms
-      LED.blinking()
+      LED.blink()
       assert %LED{state: 1} = :sys.get_state(LED)
       :timer.sleep(260)
       assert %LED{state: 0} = :sys.get_state(LED)
@@ -121,49 +135,80 @@ defmodule LEDTest do
     end
   end
 
-  describe "blinking/1" do
+  describe "blink/2" do
     test "sets gpio led to blinking at 100ms" do
-      start_link_supervised!(Timer)
+      assert start_link_supervised!({LED, gpio_pin: 24, name: :timer_test1}) |> is_pid()
 
-      LED.blinking(100)
-      assert %LED{state: 1} = :sys.get_state(LED)
-      :timer.sleep(120)
-      assert %LED{state: 0} = :sys.get_state(LED)
+      LED.blink(name: :timer_test1, interval: 100)
+      :timer.sleep(20)
+      assert %LED{state: 1} = :sys.get_state(:timer_test1)
       :timer.sleep(100)
-      assert %LED{state: 1} = :sys.get_state(LED)
+      assert %LED{state: 0} = :sys.get_state(:timer_test1)
+      :timer.sleep(100)
+      assert %LED{state: 1} = :sys.get_state(:timer_test1)
     end
 
-    test "cancel old timers before starting" do
-      start_link_supervised!(Timer)
+    test "sets gpio led to blinking at 100ms for 2 times" do
+      assert start_link_supervised!({LED, gpio_pin: 23, name: :timer_test3}) |> is_pid()
 
-      LED.blinking(50)
+      LED.blink(name: :timer_test3, interval: 50, times: 2)
+      :timer.sleep(10)
+      assert %LED{state: 1} = :sys.get_state(:timer_test3)
+      :timer.sleep(50)
+      assert %LED{state: 0} = :sys.get_state(:timer_test3)
+      :timer.sleep(50)
+      assert %LED{state: 1} = :sys.get_state(:timer_test3)
+      :timer.sleep(100)
+      assert %LED{state: 0} = :sys.get_state(:timer_test3)
+    end
+  end
+
+  describe "repeat/0" do
+    test "sets gpio led to blinking at 2 Hz" do
+      start_supervised!(LED)
+      # 2 Hz is a interval of 250ms
+      LED.repeat()
       assert %LED{state: 1} = :sys.get_state(LED)
-      :timer.sleep(60)
+      :timer.sleep(260)
       assert %LED{state: 0} = :sys.get_state(LED)
-      :timer.sleep(50)
-      assert %LED{state: 1} = :sys.get_state(LED)
-      LED.blinking(200)
-      # if timer is 1 after 50ms -> old timer does not trigger any more
-      :timer.sleep(50)
-      assert %LED{state: 1} = :sys.get_state(LED)
-      # and the 200 ms blinking is still 1
-      :timer.sleep(50)
+      :timer.sleep(250)
       assert %LED{state: 1} = :sys.get_state(LED)
     end
   end
 
-  describe "blinking/2" do
-    test "sets gpio led to blinking at 100ms for 2 times" do
-      start_supervised!(Timer)
+  describe "repeat/2" do
+    test "does not cancel old timers before starting for artful behaviour" do
+      assert start_link_supervised!({LED, gpio_pin: 24, name: :repeat_test}) |> is_pid()
 
-      LED.blinking(50, 2)
-      assert %LED{state: 1} = :sys.get_state(LED)
-      :timer.sleep(60)
-      assert %LED{state: 0} = :sys.get_state(LED)
-      :timer.sleep(50)
-      assert %LED{state: 1} = :sys.get_state(LED)
-      :timer.sleep(100)
-      assert %LED{state: 0} = :sys.get_state(LED)
+      # Pattern should be (> = trigger on/off)
+      # 50ms 1 1 1 1 1 0 0 0 0 0
+      #      >         >
+      # 20ms 1 1 0 0 1 1 0 0 1 1
+      #      >   >   >   >   >
+      # ------------------------
+      # =>   1 1 0 0 1 0 0 0 1 1
+
+      LED.repeat(name: :repeat_test, interval: 50)
+      LED.repeat(name: :repeat_test, interval: 20)
+      assert %LED{state: 1} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 1} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 0} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 0} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 1} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 0} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 0} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 0} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 1} = :sys.get_state(:repeat_test)
+      :timer.sleep(10)
+      assert %LED{state: 1} = :sys.get_state(:repeat_test)
     end
   end
 end
