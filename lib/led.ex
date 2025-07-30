@@ -1,14 +1,27 @@
 defmodule LED do
   @moduledoc """
+  [![Build Status](https://github.com/alexisruccius/led/workflows/CI/badge.svg)](https://github.com/alexisruccius/led/actions/workflows/CI.yml)
+  [![Hex.pm](https://img.shields.io/hexpm/v/led.svg)](https://hex.pm/packages/led)
+  [![API docs](https://img.shields.io/hexpm/v/led.svg?label=hexdocs "API docs")](https://hexdocs.pm/led)
+  [![Hex Downloads](https://img.shields.io/hexpm/dt/led)](https://hex.pm/packages/led)
+  [![Last Updated](https://img.shields.io/github/last-commit/alexisruccius/led.svg)](https://github.com/alexisruccius/led/commits/master)
+  [![GitHub stars](https://img.shields.io/github/stars/alexisruccius/led.svg)](https://github.com/alexisruccius/led/stargazers)
+
   Control LEDs or relays. A simple library with some artful gimmicks.
+
+  ```elixir
+  {:ok, _pid} = LED.start_link()
+  LED.blink()
+  ```
 
   This library is a simple, convenient wrapper around [Circuits.GPIO](https://hexdocs.pm/circuits_gpio/)
   for controlling LEDs or relays. Beyond basic on/off control, it enables artful, experimental,
   and even random noise light effects through overlapping repeating patterns — offering creative flexibility.
+  Use it with [Nerves](#using-with-nerves).
 
   ## ✨ Features
 
-  - ⚡ Control single LEDs or relays on GPIO pins
+  - ⚡ Control single or multiple LEDs or relays on GPIO pins
   - ✔ Easy on/off control
   - ⏰ Blink and repeat patterns with configurable intervals and counts
   - 💡 Toggle LED state
@@ -26,6 +39,20 @@ defmodule LED do
       {:led, "~> 0.1.0"}
     ]
   end
+  ```
+
+  ## ⚙️ Connect LED to Raspberry Pi (GPIO 22) example
+
+  - Anode (long leg) → GPIO pin 22
+  - Cathode (short leg) → 330Ω resistor → GND
+
+  ```shell
+  ┌─────┬──────────┬─────────────────────┐
+  │ Pin │ Use      │ Connection          │
+  ├─────┼──────────┼─────────────────────┤
+  │  6    GND        ────────────────┐   │
+  │ 15    GPIO22     ───▶|───[330Ω]──┘   │
+  └─────┴──────────┴─────────────────────┘
   ```
 
   ## 🛠 Usage
@@ -113,6 +140,23 @@ defmodule LED do
   LED.cancel_timers(:green_led)
   ```
 
+  ## Using with Nerves
+
+  You can integrate the `LED` module into your [Nerves](https://hexdocs.pm/nerves/getting-started.html) application's supervision tree.
+  For example, to control a LED connected to GPIO pin 23 (default is 22), add the LED process like this:
+
+  ```elixir
+  children = [
+    {LED, [gpio_pin: 23]}
+  ]
+  ```
+
+  This ensures the LED is supervised and ready to use with functions like `LED.on/0` or `LED.blink/1`.
+
+  💡 Works great on [Nerves-supported devices](https://hexdocs.pm/nerves/supported-targets.html) like Raspberry Pi or BeagleBone.
+
+  ## Disclaimer
+
     > #### Note on use with relay {: .tip}
     > When using a relay, check its datasheet
     > for minimum switch times to avoid damage or malfunction.
@@ -136,7 +180,7 @@ defmodule LED do
 
   Accepts keyword arguments in `init_args` to configure the LED:
 
-    * `:name` – (atom) Optional name for the GenServer (used for referencing multiple LEDs)
+    * `:name` – Optional name for the GenServer (used for referencing multiple LEDs)
     * `:gpio_pin` – (integer) GPIO pin to control; defaults to `22`
     * `:initial_value` – (0 or 1) Initial LED state; `0` = off, `1` = on (default: `1`)
 
@@ -268,7 +312,7 @@ defmodule LED do
 
   Accepts keyword options:
 
-    * `:name` – (atom) GenServer name of the LED. Defaults to the module name.
+    * `:name` – GenServer name of the LED. Defaults to the module name.
     * `:interval` – (integer) Blink interval in milliseconds. Default is `250` (≈2 Hz).
     * `:times` – (integer) Number of blinks. Default is `-1` for continuous blinking.
 
@@ -310,7 +354,7 @@ defmodule LED do
 
   ## Options
 
-    * `:name` – (atom) GenServer name of the LED. Defaults to the module name.
+    * `:name` – GenServer name of the LED. Defaults to the module name.
     * `:interval` – (integer) Interval in milliseconds between toggles. Default: `250` (≈2 Hz).
     * `:times` – (integer) Number of blinks. `-1` means infinite. Default: `-1`.
 
