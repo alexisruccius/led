@@ -4,7 +4,7 @@ defmodule Led.MixProject do
   def project do
     [
       app: :led,
-      version: "0.1.0",
+      version: "0.1.1",
       description:
         "Blink LEDs or relays via GPIO with ease. Features artful gimmicks for creative setups.",
       elixir: "~> 1.18",
