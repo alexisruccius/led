@@ -27,3 +27,6 @@ led-*.tar
 
 # asdf elixir erlang version
 .tool-versions
+
+# IDE
+.vscode/
