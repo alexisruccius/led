@@ -91,31 +91,31 @@ defmodule LEDTest do
     end
   end
 
-  describe "is_lit?/0" do
+  describe "lit?/0" do
     test "returns true if LED state is 1 (on)" do
       start_supervised!(LED)
       LED.set(1)
-      assert LED.is_lit?()
+      assert LED.lit?()
     end
 
     test "returns false if LED state is 0 (off)" do
       start_supervised!(LED)
       LED.set(0)
-      refute LED.is_lit?()
+      refute LED.lit?()
     end
   end
 
-  describe "is_lit?/1" do
+  describe "lit?/1" do
     test "returns true if LED state is 1 (on)" do
       start_link_supervised!({LED, name: :led_pink})
       LED.set(1, :led_pink)
-      assert LED.is_lit?(:led_pink)
+      assert LED.lit?(:led_pink)
     end
 
     test "returns false if LED state is 0 (off)" do
       start_link_supervised!({LED, name: :led_pink})
       LED.set(0, :led_pink)
-      refute LED.is_lit?(:led_pink)
+      refute LED.lit?(:led_pink)
     end
   end
 
@@ -123,13 +123,13 @@ defmodule LEDTest do
     test "toggles LED state on and off" do
       {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: 23, initial_value: 0)
 
-      assert LED.is_lit?(:test_toggle) == false
+      assert LED.lit?(:test_toggle) == false
 
       LED.toggle(:test_toggle)
-      assert LED.is_lit?(:test_toggle) == true
+      assert LED.lit?(:test_toggle) == true
 
       LED.toggle(:test_toggle)
-      assert LED.is_lit?(:test_toggle) == false
+      assert LED.lit?(:test_toggle) == false
     end
 
     test "timer_refs get canceled whenn toggling" do

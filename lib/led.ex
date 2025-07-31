@@ -300,9 +300,42 @@ defmodule LED do
       iex> LED.is_lit?(:led_pink)
       false
   """
+  @doc deprecated: "Use `lit?/1` instead"
   @spec is_lit?(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: boolean()
   @doc since: "0.1.0"
+  # credo:disable-for-next-line
   def is_lit?(name \\ __MODULE__) do
+    %LED{state: state} = :sys.get_state(name)
+    state == 1
+  end
+
+  @doc """
+  Returns `true` if the LED is currently on (`state == 1`), otherwise returns `false`.
+
+  Accepts an optional `name` argument for the GenServer process name set via `start_link/1`.
+  Defaults to the module name.
+
+  ## Examples
+
+      iex> {:ok, _pid} = LED.start_link()
+      iex> LED.on()
+      iex> LED.lit?()
+      true
+      iex> LED.off()
+      iex> LED.lit?()
+      false
+
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_pink)
+      iex> LED.on(:led_pink)
+      iex> LED.lit?(:led_pink)
+      true
+      iex> LED.off(:led_pink)
+      iex> LED.lit?(:led_pink)
+      false
+  """
+  @spec lit?(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: boolean()
+  @doc since: "0.1.1"
+  def lit?(name \\ __MODULE__) do
     %LED{state: state} = :sys.get_state(name)
     state == 1
   end
