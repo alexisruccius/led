@@ -8,7 +8,8 @@ defmodule LED.TimerTest do
       state = 1
       interval = 250
       timer = 0
-      assert Timer.send_timer({state, interval, timer}) |> is_nil()
+      timer_ref = Timer.send_timer({state, interval, timer})
+      assert timer_ref |> is_nil()
     end
 
     test "when times == -1 sends message without modifying" do

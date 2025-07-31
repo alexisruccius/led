@@ -161,7 +161,8 @@ defmodule LEDTest do
 
   describe "blink/2" do
     test "sets gpio led to blinking at 100ms" do
-      assert start_link_supervised!({LED, gpio_pin: 24, name: :timer_test1}) |> is_pid()
+      pid = start_link_supervised!({LED, gpio_pin: 24, name: :timer_test1})
+      assert pid |> is_pid()
 
       LED.blink(name: :timer_test1, interval: 100)
       :timer.sleep(20)
@@ -173,7 +174,8 @@ defmodule LEDTest do
     end
 
     test "sets gpio led to blinking at 100ms for 2 times" do
-      assert start_link_supervised!({LED, gpio_pin: 23, name: :timer_test3}) |> is_pid()
+      pid = start_link_supervised!({LED, gpio_pin: 23, name: :timer_test3})
+      assert pid |> is_pid()
 
       LED.blink(name: :timer_test3, interval: 50, times: 2)
       :timer.sleep(10)
@@ -202,7 +204,8 @@ defmodule LEDTest do
 
   describe "repeat/2" do
     test "does not cancel old timers before starting for artful behaviour" do
-      assert start_link_supervised!({LED, gpio_pin: 24, name: :repeat_test}) |> is_pid()
+      pid = start_link_supervised!({LED, gpio_pin: 24, name: :repeat_test})
+      assert pid |> is_pid()
 
       # Pattern should be (> = trigger on/off)
       # 50ms 1 1 1 1 1 0 0 0 0 0

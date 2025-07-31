@@ -163,17 +163,17 @@ defmodule LED do
   """
   @moduledoc since: "0.1.0"
 
-  @gpio_pin 22
-  @initial_value 1
-
-  defstruct name: nil, gpio_pin: nil, output_ref: nil, state: 0, timer_refs: []
-
   use GenServer
+
   alias Circuits.GPIO
+  alias LED.Timer
 
   require Logger
 
-  alias LED.Timer
+  defstruct name: nil, gpio_pin: nil, output_ref: nil, state: 0, timer_refs: []
+
+  @gpio_pin 22
+  @initial_value 1
 
   @doc """
   Starts the LED GenServer.
@@ -466,7 +466,7 @@ defmodule LED do
 
   # server callbacks
 
-  @impl true
+  @impl GenServer
   def init(init_args) do
     name = Keyword.get(init_args, :name, __MODULE__)
     gpio_pin = Keyword.get(init_args, :gpio_pin, @gpio_pin)
@@ -478,27 +478,27 @@ defmodule LED do
      %__MODULE__{name: name, gpio_pin: gpio_pin, output_ref: output_ref, state: initial_value}}
   end
 
-  @impl true
+  @impl GenServer
   def handle_cast({:set, state}, %__MODULE__{} = led) do
     {:noreply, led |> struct!(state: write_gpio(led, state))}
   end
 
   ## timer -> blinking, repeating
 
-  @impl true
+  @impl GenServer
   def handle_cast({:timer_start, interval, times}, %__MODULE__{} = led) do
     timer_refs = send_timer(1, interval, times, led.timer_refs)
     state = write_gpio(led, 1)
     {:noreply, led |> struct!(timer_refs: timer_refs, state: state)}
   end
 
-  @impl true
+  @impl GenServer
   def handle_cast(:cancel_timers, %__MODULE__{} = led) do
     Timer.cancel(led.timer_refs)
     {:noreply, led |> struct!(timer_refs: [])}
   end
 
-  @impl true
+  @impl GenServer
   def handle_info({state, interval, times}, %__MODULE__{} = led) do
     timer_refs = send_timer(state, interval, times, led.timer_refs)
     state = write_gpio(led, state)
