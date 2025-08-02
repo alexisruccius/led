@@ -56,8 +56,9 @@ defmodule LED.Timer do
   @spec cancel(list(reference())) :: list()
   def cancel(timer_refs), do: Enum.map(timer_refs, &cancel_ref/1)
 
-  defp cancel_ref(timer_ref) when timer_ref == nil do
-    Logger.debug("There is no timer to cancel: timer_ref == nil")
+  defp cancel_ref(timer_ref) when not is_reference(timer_ref) do
+    Logger.debug("There is no timer to cancel: not is_reference(timer_ref)")
+    false
   end
 
   defp cancel_ref(timer_ref), do: Process.cancel_timer(timer_ref)

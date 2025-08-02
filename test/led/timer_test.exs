@@ -57,5 +57,10 @@ defmodule LED.TimerTest do
       assert is_integer(b) or b == false
       assert is_integer(c) or c == false
     end
+
+    test "when timer_ref is no reference return false" do
+      timer_refs = [nil]
+      assert [false] = Timer.cancel(timer_refs)
+    end
   end
 end
