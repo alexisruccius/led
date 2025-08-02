@@ -10,3 +10,6 @@ config :circuits_sim,
     {CircuitsSim.Device.GPIOLED, gpio_spec: 23},
     {CircuitsSim.Device.GPIOLED, gpio_spec: 24}
   ]
+
+# Print only warnings and errors during test
+config :logger, level: :warning
