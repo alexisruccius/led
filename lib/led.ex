@@ -443,11 +443,15 @@ defmodule LED do
       iex> LED.set(1, :led_red)
   """
   @doc since: "0.1.0"
-  @spec set(any(), atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
-  def set(state, name \\ __MODULE__) do
+  @spec set(0 | 1, atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
+  def set(state, name \\ __MODULE__)
+
+  def set(state, name) when state == 0 or state == 1 do
     cancel_timers(name)
     GenServer.cast(name, {:set, state})
   end
+
+  def set(_state, _name), do: Logger.warning("Only state 0 or 1 allowed in LED.set/2")
 
   @doc """
   Starts a blinking timer that toggles the LED at a given interval and for a

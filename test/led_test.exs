@@ -34,6 +34,21 @@ defmodule LEDTest do
       LED.set(0)
       assert %LED{state: 0} = :sys.get_state(LED)
     end
+
+    test "handle invalid state != 0, 1" do
+      start_supervised!(LED)
+      assert %LED{state: initial_state} = :sys.get_state(LED)
+
+      LED.set(0.1)
+      assert %LED{state: state1} = :sys.get_state(LED)
+      assert initial_state == state1
+      LED.set(10)
+      assert %LED{state: state2} = :sys.get_state(LED)
+      assert initial_state == state2
+      LED.set(-10)
+      assert %LED{state: state3} = :sys.get_state(LED)
+      assert initial_state == state3
+    end
   end
 
   describe "set/2" do
