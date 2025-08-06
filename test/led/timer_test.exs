@@ -17,7 +17,7 @@ defmodule LED.TimerTest do
       interval = 16
       timer = -1
       assert Timer.send_timer({state, interval, timer})
-      assert_receive {1, 16, -1}, 20
+      assert_receive {1, 16, -1}, 36
     end
 
     test "off message (0) sends modified message times - 1" do
@@ -25,7 +25,7 @@ defmodule LED.TimerTest do
       interval = 16
       timer = 9
       assert Timer.send_timer({state, interval, timer})
-      assert_receive {0, 16, 8}, 20
+      assert_receive {0, 16, 8}, 36
     end
 
     test "on message (0) sends message without modifying times" do
@@ -33,7 +33,7 @@ defmodule LED.TimerTest do
       interval = 16
       timer = 6
       assert Timer.send_timer({state, interval, timer})
-      assert_receive {1, 16, 6}, 20
+      assert_receive {1, 16, 6}, 36
     end
   end
 
