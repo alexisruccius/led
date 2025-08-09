@@ -81,6 +81,11 @@ defmodule LED.Pattern do
     GenServer.start_link(__MODULE__, args, name: name)
   end
 
+  @spec reset(GenServer.server()) :: :ok
+  def reset(name \\ __MODULE__) do
+    GenServer.cast(name, :reset)
+  end
+
   # callbacks
 
   @impl GenServer
@@ -101,6 +106,15 @@ defmodule LED.Pattern do
 
     Process.send_after(self(), :trigger, 6)
     {:ok, pattern}
+  end
+
+  @impl GenServer
+  @spec handle_cast(:reset, t()) :: {:noreply, t()}
+  def handle_cast(:reset, %__MODULE__{} = pattern) do
+    %__MODULE__{led_name: led_name, programm: programm} = pattern
+
+    LED.off(led_name)
+    {:noreply, pattern |> struct!(intervals: programm.intervals, durations: programm.durations)}
   end
 
   @impl GenServer

@@ -53,6 +53,40 @@ defmodule LED.PatternTest do
     end
   end
 
+  describe "reset/0" do
+    test "resets the intervals and durations from the programm map" do
+      start_supervised!({Pattern, intervals: [5, 6, 7], durations: [10, 20]})
+      # wait for 2 triggers
+      Process.sleep(23)
+      assert :ok = Pattern.reset()
+      assert %Pattern{intervals: [5, 6, 7], durations: [10, 20]} = :sys.get_state(Pattern)
+    end
+
+    test "stops all timer_refs in the LED GenServer and sets LED state to off (0)" do
+      start_supervised!({LED, name: :reset_led})
+      start_supervised!({Pattern, led_name: :reset_led, intervals: [250]})
+      # wait for trigger
+      Process.sleep(7)
+      assert :ok = Pattern.reset()
+      # wait for LED
+      Process.sleep(2)
+      assert %LED{state: 0, timer_refs: []} = :sys.get_state(:reset_led)
+    end
+  end
+
+  describe "reset/1" do
+    test "resets works for other Pattern (GenServer) name" do
+      start_supervised!(
+        {Pattern, name: :reset_pattern, intervals: [5, 6, 7], durations: [10, 20]}
+      )
+
+      # wait for 2 triggers
+      Process.sleep(23)
+      assert :ok = Pattern.reset(:reset_pattern)
+      assert %Pattern{intervals: [5, 6, 7], durations: [10, 20]} = :sys.get_state(:reset_pattern)
+    end
+  end
+
   describe "handle_info/2" do
     test "triggers LED.blink" do
       start_supervised!(LED)
