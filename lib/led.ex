@@ -534,7 +534,7 @@ defmodule LED do
 
   @impl GenServer
   def handle_cast({:timer_start, interval, times}, %__MODULE__{} = led) do
-    timer_refs = send_timer(1, interval, times, led.timer_refs)
+    timer_refs = send_timer(0, interval, times, led.timer_refs)
     state = write_gpio(led, 1)
     {:noreply, led |> struct!(timer_refs: timer_refs, state: state)}
   end
@@ -547,7 +547,7 @@ defmodule LED do
 
   @impl GenServer
   def handle_info({state, interval, times}, %__MODULE__{} = led) do
-    timer_refs = send_timer(state, interval, times, led.timer_refs)
+    timer_refs = send_timer(1 - state, interval, times, led.timer_refs)
     state = write_gpio(led, state)
     {:noreply, led |> struct!(timer_refs: timer_refs, state: state)}
   end
@@ -559,6 +559,6 @@ defmodule LED do
   end
 
   defp send_timer(state, interval, times, timer_refs) do
-    [Timer.send_timer({1 - state, interval, times}) | timer_refs]
+    [Timer.send_timer({state, interval, times}) | timer_refs]
   end
 end

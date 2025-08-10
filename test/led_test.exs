@@ -160,21 +160,19 @@ defmodule LEDTest do
     end
   end
 
-  describe "blink/0" do
+  describe "blink/1" do
     test "sets gpio led to blinking at 2 Hz" do
-      start_supervised!(LED)
+      start_supervised!({LED, name: :blink_test_led})
 
       # 2 Hz is a interval of 250ms
-      LED.blink()
-      assert %LED{state: 1} = :sys.get_state(LED)
-      :timer.sleep(260)
-      assert %LED{state: 0} = :sys.get_state(LED)
+      LED.blink(name: :blink_test_led)
+      assert %LED{state: 1} = :sys.get_state(:blink_test_led)
+      :timer.sleep(300)
+      assert %LED{state: 0} = :sys.get_state(:blink_test_led)
       :timer.sleep(250)
-      assert %LED{state: 1} = :sys.get_state(LED)
+      assert %LED{state: 1} = :sys.get_state(:blink_test_led)
     end
-  end
 
-  describe "blink/2" do
     test "sets gpio led to blinking at 100ms" do
       pid = start_link_supervised!({LED, gpio_pin: "GPIO24", name: :timer_test1})
       assert pid |> is_pid()
@@ -217,7 +215,7 @@ defmodule LEDTest do
     end
   end
 
-  describe "repeat/2" do
+  describe "repeat/1" do
     test "does not cancel old timers before starting for artful behaviour" do
       pid = start_link_supervised!({LED, gpio_pin: "GPIO24", name: :repeat_test})
       assert pid |> is_pid()
