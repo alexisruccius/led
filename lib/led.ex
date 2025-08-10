@@ -170,7 +170,7 @@ defmodule LED do
 
   require Logger
 
-  defstruct name: nil, gpio_pin: nil, output_ref: nil, state: 0, timer_refs: []
+  defstruct name: nil, gpio_pin: nil, handle: nil, state: 0, timer_refs: []
 
   @gpio_pin "GPIO22"
   @initial_value 1
@@ -520,10 +520,9 @@ defmodule LED do
     gpio_pin = Keyword.get(init_args, :gpio_pin, @gpio_pin)
     initial_value = Keyword.get(init_args, :initial_value, @initial_value)
 
-    {:ok, output_ref} = GPIO.open(gpio_pin, :output, initial_value: initial_value)
+    {:ok, handle} = GPIO.open(gpio_pin, :output, initial_value: initial_value)
 
-    {:ok,
-     %__MODULE__{name: name, gpio_pin: gpio_pin, output_ref: output_ref, state: initial_value}}
+    {:ok, %__MODULE__{name: name, gpio_pin: gpio_pin, handle: handle, state: initial_value}}
   end
 
   @impl GenServer
@@ -554,7 +553,7 @@ defmodule LED do
   end
 
   defp write_gpio(led, state) do
-    :ok = GPIO.write(led.output_ref, state)
+    :ok = GPIO.write(led.handle, state)
     Logger.debug("LED #{led.name} state #{state}")
     state
   end
