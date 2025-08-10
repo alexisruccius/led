@@ -7,36 +7,36 @@ defmodule LEDTest do
 
   describe "start_link/1" do
     test "sets GenServer name" do
-      start_supervised!({LED, name: :second_led})
+      start_link_supervised!({LED, name: :second_led})
       assert %LED{} = :sys.get_state(:second_led)
     end
 
     test "sets gpio_pin" do
-      start_supervised!({LED, gpio_pin: "GPIO23", name: :led_gpio_pin_test})
+      start_link_supervised!({LED, gpio_pin: "GPIO23", name: :led_gpio_pin_test})
       assert %LED{gpio_pin: "GPIO23"} = :sys.get_state(:led_gpio_pin_test)
     end
 
     test "sets inital_value of LED state" do
-      start_supervised!({LED, name: :third_led, initial_value: 0})
+      start_link_supervised!({LED, name: :third_led, initial_value: 0})
       assert %LED{state: 0} = :sys.get_state(:third_led)
     end
   end
 
   describe "set/1" do
     test "sets gpio led pin to 1" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       LED.set(1)
       assert %LED{state: 1} = :sys.get_state(LED)
     end
 
     test "sets gpio led pin to 0" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       LED.set(0)
       assert %LED{state: 0} = :sys.get_state(LED)
     end
 
     test "handle invalid state != 0, 1" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       assert %LED{state: initial_state} = :sys.get_state(LED)
 
       LED.set(0.1)
@@ -74,7 +74,7 @@ defmodule LEDTest do
 
   describe "on/0" do
     test "sets gpio led pin to 1" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       LED.on()
       assert %LED{state: 1} = :sys.get_state(LED)
     end
@@ -91,7 +91,7 @@ defmodule LEDTest do
 
   describe "off/0" do
     test "sets gpio led pin to 0" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       LED.off()
       assert %LED{state: 0} = :sys.get_state(LED)
     end
@@ -108,13 +108,13 @@ defmodule LEDTest do
 
   describe "lit?/0" do
     test "returns true if LED state is 1 (on)" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       LED.set(1)
       assert LED.lit?()
     end
 
     test "returns false if LED state is 0 (off)" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       LED.set(0)
       refute LED.lit?()
     end
@@ -162,7 +162,7 @@ defmodule LEDTest do
 
   describe "blink/1" do
     test "sets gpio led to blinking at 2 Hz" do
-      start_supervised!({LED, name: :blink_test_led})
+      start_link_supervised!({LED, name: :blink_test_led})
 
       # 2 Hz is a interval of 250ms
       LED.blink(name: :blink_test_led)
@@ -204,7 +204,7 @@ defmodule LEDTest do
 
   describe "repeat/0" do
     test "sets gpio led to blinking at 2 Hz" do
-      start_supervised!(LED)
+      start_link_supervised!(LED)
       # 2 Hz is a interval of 250ms
       LED.repeat()
       assert %LED{state: 1} = :sys.get_state(LED)
