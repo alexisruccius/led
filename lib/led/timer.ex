@@ -28,7 +28,7 @@ defmodule LED.Timer do
   @doc since: "0.1.0"
   @spec send_timer({0 | 1, integer(), integer()}) :: nil | reference()
   # -1 means infinite
-  def send_timer({_state, interval, times} = message) when times == -1 do
+  def send_timer({_state, interval, times} = message) when times <= -1 do
     send_after(message, interval)
   end
 

@@ -12,12 +12,28 @@ defmodule LED.TimerTest do
       assert timer_ref |> is_nil()
     end
 
-    test "when times == -1 sends message without modifying" do
-      state = 1
+    test "when times == -1 sends message without modifying for infinite loop" do
+      state0 = 0
       interval = 16
       timer = -1
-      assert Timer.send_timer({state, interval, timer})
+      assert Timer.send_timer({state0, interval, timer})
+      assert_receive {0, 16, -1}, 36
+
+      state1 = 1
+      assert Timer.send_timer({state1, interval, timer})
       assert_receive {1, 16, -1}, 36
+    end
+
+    test "when times < -1 sends message without modifying for infinite loop" do
+      state0 = 0
+      interval = 16
+      timer = -100
+      assert Timer.send_timer({state0, interval, timer})
+      assert_receive {0, 16, -100}, 36
+
+      state1 = 1
+      assert Timer.send_timer({state1, interval, timer})
+      assert_receive {1, 16, -100}, 36
     end
 
     test "off message (0) sends modified message times - 1" do
