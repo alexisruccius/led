@@ -89,6 +89,12 @@ defmodule LED.Pattern do
   @doc """
   Pauses the currently running pattern without resetting its state.
 
+  The pattern can be resumed later using `play/1`.
+
+  > #### Note {: .tip}
+  > This does not preserve overlapping patterns in the LED module
+  > when `:overlapping?` is set to `true`.
+
   ## Examples
 
       iex> LED.Pattern.pause(:green_led_pattern)
@@ -97,6 +103,25 @@ defmodule LED.Pattern do
   @spec pause(GenServer.server()) :: :ok
   def pause(name \\ __MODULE__) do
     GenServer.cast(name, :pause)
+  end
+
+  @doc """
+  Resumes the currently paused pattern without resetting its state.
+
+  The pattern can be paused using `pause/1`.
+
+  > #### Note {: .tip}
+  > This does not restart overlapping patterns in the LED module
+  > when `:overlapping?` is set to `true`, because those were canceled by `pause/1`.
+
+  ## Examples
+
+      iex> LED.Pattern.play(:green_led_pattern)
+      :ok
+  """
+  @spec play(GenServer.server()) :: :ok
+  def play(name \\ __MODULE__) do
+    GenServer.cast(name, :play)
   end
 
   @doc """
@@ -143,6 +168,13 @@ defmodule LED.Pattern do
     cancel_trigger(pattern.trigger_ref)
     LED.off(pattern.led_name)
     {:noreply, pattern |> struct!(trigger_ref: nil)}
+  end
+
+  @impl GenServer
+  @spec handle_cast(:play, t()) :: {:noreply, t()}
+  def handle_cast(:play, %__MODULE__{} = pattern) do
+    send(self(), :trigger)
+    {:noreply, pattern}
   end
 
   @impl GenServer
