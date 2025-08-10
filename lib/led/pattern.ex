@@ -33,7 +33,12 @@ defmodule LED.Pattern do
           overlapping?: boolean(),
           programm: map()
         }
-  defstruct led_name: LED, intervals: [], durations: [], overlapping?: false, programm: %{}
+  defstruct led_name: LED,
+            intervals: [],
+            durations: [],
+            overlapping?: false,
+            programm: %{},
+            trigger_ref: nil
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
   @doc """
@@ -81,6 +86,30 @@ defmodule LED.Pattern do
     GenServer.start_link(__MODULE__, args, name: name)
   end
 
+  @doc """
+  Pauses the currently running pattern without resetting its state.
+
+  ## Examples
+
+      iex> LED.Pattern.pause(:green_led_pattern)
+      :ok
+  """
+  @spec pause(GenServer.server()) :: :ok
+  def pause(name \\ __MODULE__) do
+    GenServer.cast(name, :pause)
+  end
+
+  @doc """
+  Resets the current pattern to its initial state.
+
+  Does not stop the pattern; use `pause/1` to stop it
+  before calling `reset/1`.
+
+  ## Examples
+
+      iex> LED.Pattern.reset(:green_led_pattern)
+      :ok
+  """
   @spec reset(GenServer.server()) :: :ok
   def reset(name \\ __MODULE__) do
     GenServer.cast(name, :reset)
@@ -109,10 +138,17 @@ defmodule LED.Pattern do
   end
 
   @impl GenServer
+  @spec handle_cast(:pause, t()) :: {:noreply, t()}
+  def handle_cast(:pause, %__MODULE__{} = pattern) do
+    cancel_trigger(pattern.trigger_ref)
+    LED.off(pattern.led_name)
+    {:noreply, pattern |> struct!(trigger_ref: nil)}
+  end
+
+  @impl GenServer
   @spec handle_cast(:reset, t()) :: {:noreply, t()}
   def handle_cast(:reset, %__MODULE__{} = pattern) do
     %__MODULE__{led_name: led_name, programm: programm} = pattern
-
     LED.off(led_name)
     {:noreply, pattern |> struct!(intervals: programm.intervals, durations: programm.durations)}
   end
@@ -134,9 +170,11 @@ defmodule LED.Pattern do
 
     trigger_led(overlapping?, interval: interval_ms, name: led_name)
 
-    Process.send_after(self(), :trigger, duration_ms)
+    trigger_ref = Process.send_after(self(), :trigger, duration_ms)
 
-    {:noreply, pattern |> struct!(intervals: intervals_rest, durations: durations_rest)}
+    {:noreply,
+     pattern
+     |> struct!(intervals: intervals_rest, durations: durations_rest, trigger_ref: trigger_ref)}
   end
 
   defp if_empty(nil, default), do: default
@@ -151,4 +189,7 @@ defmodule LED.Pattern do
 
   defp default_intervals, do: [100, 25]
   defp default_durations, do: [500, 250, 500]
+
+  defp cancel_trigger(trigger_ref) when not is_reference(trigger_ref), do: false
+  defp cancel_trigger(trigger_ref), do: Process.cancel_timer(trigger_ref)
 end
