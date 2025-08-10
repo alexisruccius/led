@@ -27,7 +27,7 @@ defmodule LED do
   - 💡 Toggle LED state
   - 🎛️ Optional named LED processes for multiple devices
   - Supports overlapping repeat patterns for creative effects
-  - Defaults to GPIO pin `22` with LED initially on
+  - Defaults to GPIO pin 22 `"GPIO22"` (Raspberry Pi Zero W) with LED initially on
 
   ## Installation
 
@@ -41,7 +41,7 @@ defmodule LED do
   end
   ```
 
-  ## ⚙️ Connect LED to Raspberry Pi (GPIO 22) example
+  ## ⚙️ Connect LED to Raspberry Pi Zero W (`"GPIO22"`) example
 
   - Anode (long leg) → GPIO pin 22
   - Cathode (short leg) → 330Ω resistor → GND
@@ -59,16 +59,16 @@ defmodule LED do
 
   ### Start an LED
 
-  * Default (gpio_pin: 22, initially on):
+  * Default (gpio_pin: "GPIO22", initially on):
 
   ```elixir
   {:ok, _pid} = LED.start_link()
   ```
 
-  * Named (gpio_pin: 23, initially off):
+  * Named (gpio_pin: "GPIO23", initially off):
 
   ```elixir
-  {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: 23, initial_value: 0)
+  {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: "GPIO23", initial_value: 0)
   ```
 
   ### Turn it on or off
@@ -143,11 +143,11 @@ defmodule LED do
   ## Using with Nerves
 
   You can integrate the `LED` module into your [Nerves](https://hexdocs.pm/nerves/getting-started.html) application's supervision tree.
-  For example, to control a LED connected to GPIO pin 23 (default is 22), add the LED process like this:
+  For example, to control a LED connected to GPIO pin "GPIO23" (default is "GPIO22"), add the LED process like this:
 
   ```elixir
   children = [
-    {LED, [gpio_pin: 23]}
+    {LED, [gpio_pin: "GPIO23"]}
   ]
   ```
 
@@ -172,7 +172,7 @@ defmodule LED do
 
   defstruct name: nil, gpio_pin: nil, output_ref: nil, state: 0, timer_refs: []
 
-  @gpio_pin 22
+  @gpio_pin "GPIO22"
   @initial_value 1
 
   @doc """
@@ -181,8 +181,19 @@ defmodule LED do
   Accepts keyword arguments in `init_args` to configure the LED:
 
     * `:name` – Optional name for the GenServer (used for referencing multiple LEDs)
-    * `:gpio_pin` – (integer) GPIO pin to control; defaults to `22`
     * `:initial_value` – (0 or 1) Initial LED state; `0` = off, `1` = on (default: `1`)
+    * `:gpio_pin` – GPIO pin to control; defaults to `"GPIO22"`.
+      Use any of the formats described in the
+      [Circuits.GPIO docs](https://hexdocs.pm/circuits_gpio/2.1.2/Circuits.GPIO.html#t:gpio_spec/0).
+      You can list available GPIO references with `Circuits.GPIO.enumerate/0`.
+      For example, on a Raspberry Pi Zero W:
+
+      ```elixir
+      [
+        %{label: "GPIO22", location: {"gpiochip0", 22}, controller: "pinctrl-bcm2835"},
+        %{label: "GPIO23", location: {"gpiochip0", 23}, controller: "pinctrl-bcm2835"}
+      ]
+      ```
 
   ## Examples
 
@@ -190,10 +201,10 @@ defmodule LED do
 
       iex> {:ok, _pid} = LED.start_link()
 
-  Start a named LED on pin 23, initially off.
+  Start a named LED on pin "GPIO23", initially off.
   You can control it with:
 
-      iex> {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: 23, initial_value: 0)
+      iex> {:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: "GPIO23", initial_value: 0)
       iex> LED.on(:green_led)
       iex> LED.is_lit?(:green_led)
       true
@@ -216,13 +227,13 @@ defmodule LED do
 
   ## Examples
 
-  Turn on the default LED (GPIO pin 22):
+  Turn on the default LED (GPIO pin "GPIO22"):
 
       iex> LED.on()
 
-  Start and turn on a named LED on GPIO pin 23:
+  Start and turn on a named LED on GPIO pin "GPIO23":
 
-      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_green)
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: "GPIO23", name: :led_green)
       iex> LED.on(:led_green)
   """
   @doc since: "0.1.0"
@@ -240,13 +251,13 @@ defmodule LED do
 
   ## Examples
 
-  Turn off the default LED (GPIO pin 22):
+  Turn off the default LED (GPIO pin "GPIO22"):
 
       iex> LED.off()
 
-  Start and turn off a named LED on GPIO pin 23:
+  Start and turn off a named LED on GPIO pin "GPIO23":
 
-      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_yellow)
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: "GPIO23", name: :led_yellow)
       iex> LED.off(:led_yellow)
   """
   @doc since: "0.1.0"
@@ -264,7 +275,7 @@ defmodule LED do
       iex> LED.is_lit?()
       false
 
-      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :green_led)
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: "GPIO23", name: :green_led)
       iex> LED.off(:green_led)
       iex> LED.toggle(:green_led)
       iex> LED.is_lit?(:green_led)
@@ -292,7 +303,7 @@ defmodule LED do
       iex> LED.is_lit?()
       false
 
-      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_pink)
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: "GPIO23", name: :led_pink)
       iex> LED.on(:led_pink)
       iex> LED.is_lit?(:led_pink)
       true
@@ -325,7 +336,7 @@ defmodule LED do
       iex> LED.lit?()
       false
 
-      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_pink)
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: "GPIO23", name: :led_pink)
       iex> LED.on(:led_pink)
       iex> LED.lit?(:led_pink)
       true
@@ -438,7 +449,7 @@ defmodule LED do
 
   Control a named LED:
 
-      iex> {:ok, _pid} = LED.start_link(gpio_pin: 23, name: :led_red)
+      iex> {:ok, _pid} = LED.start_link(gpio_pin: "GPIO23", name: :led_red)
       iex> LED.set(0, :led_red)
       iex> LED.set(1, :led_red)
   """

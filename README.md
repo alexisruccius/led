@@ -27,7 +27,7 @@ Use it with [Nerves](#using-with-nerves).
 - 💡 Toggle LED state
 - 🎛️ Optional named LED processes for multiple devices
 - Supports overlapping repeat patterns for creative effects
-- Defaults to GPIO pin `22` with LED initially on
+- Defaults to GPIO pin `"GPIO22"` with LED initially on
 
 ## Installation
 
@@ -41,12 +41,12 @@ def deps do
 end
 ```
 
-## ⚙️ Connect LED to Raspberry Pi (GPIO 22) example
+## ⚙️ Connect LED to Raspberry Pi Zero W (`"GPIO22"`) example
 
-- Anode (long leg) → GPIO pin 22
+- Anode (long leg) → GPIO pin "GPIO22"
 - Cathode (short leg) → 330Ω resistor → GND
 
-```shell
+```bash
 ┌─────┬────────────┬─────────────────────┐
 │ Pin │ Use        │ Connection          │
 ├─────┼────────────┼─────────────────────┤
@@ -59,16 +59,16 @@ end
 
 ### Start an LED
 
-* Default (gpio_pin: 22, initially on):
+* Default (gpio_pin: "GPIO22", initially on):
 
 ```elixir
 {:ok, _pid} = LED.start_link()
 ```
 
-* Named (gpio_pin: 23, initially off):
+* Named (gpio_pin: "GPIO23", initially off):
 
 ```elixir
-{:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: 23, initial_value: 0)
+{:ok, _pid} = LED.start_link(name: :green_led, gpio_pin: "GPIO23", initial_value: 0)
 ```
 
 ### Turn it on or off
@@ -143,11 +143,11 @@ LED.cancel_timers(:green_led)
 ## Using with Nerves
 
 You can integrate the `LED` module into your [Nerves](https://hexdocs.pm/nerves/getting-started.html) application's supervision tree.  
-For example, to control a LED connected to GPIO pin 23 (default is 22), add the LED process like this:
+For example, to control a LED connected to GPIO pin "GPIO23" (default is "GPIO22"), add the LED process like this:
 
 ```elixir
 children = [
-  {LED, [gpio_pin: 23]}
+  {LED, [gpio_pin: "GPIO23"]}
 ]
 ```
 

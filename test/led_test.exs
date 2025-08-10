@@ -12,8 +12,8 @@ defmodule LEDTest do
     end
 
     test "sets gpio_pin" do
-      start_supervised!({LED, gpio_pin: 23, name: :led_gpio_pin_test})
-      assert %LED{gpio_pin: 23} = :sys.get_state(:led_gpio_pin_test)
+      start_supervised!({LED, gpio_pin: "GPIO23", name: :led_gpio_pin_test})
+      assert %LED{gpio_pin: "GPIO23"} = :sys.get_state(:led_gpio_pin_test)
     end
 
     test "sets inital_value of LED state" do
@@ -60,7 +60,7 @@ defmodule LEDTest do
     end
 
     test "timer_refs get canceled when set" do
-      {:ok, _pid} = LED.start_link(name: :test_set, gpio_pin: 23, initial_value: 0)
+      {:ok, _pid} = LED.start_link(name: :test_set, gpio_pin: "GPIO23", initial_value: 0)
 
       LED.blink(name: :test_set)
       assert %LED{timer_refs: timer_refs} = :sys.get_state(:test_set)
@@ -136,7 +136,7 @@ defmodule LEDTest do
 
   describe "toggle/1" do
     test "toggles LED state on and off" do
-      {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: 23, initial_value: 0)
+      {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: "GPIO23", initial_value: 0)
 
       assert LED.lit?(:test_toggle) == false
 
@@ -148,7 +148,7 @@ defmodule LEDTest do
     end
 
     test "timer_refs get canceled whenn toggling" do
-      {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: 23, initial_value: 0)
+      {:ok, _pid} = LED.start_link(name: :test_toggle, gpio_pin: "GPIO23", initial_value: 0)
 
       LED.blink(name: :test_toggle)
       assert %LED{timer_refs: timer_refs} = :sys.get_state(:test_toggle)
@@ -176,7 +176,7 @@ defmodule LEDTest do
 
   describe "blink/2" do
     test "sets gpio led to blinking at 100ms" do
-      pid = start_link_supervised!({LED, gpio_pin: 24, name: :timer_test1})
+      pid = start_link_supervised!({LED, gpio_pin: "GPIO24", name: :timer_test1})
       assert pid |> is_pid()
 
       LED.blink(name: :timer_test1, interval: 100)
@@ -189,7 +189,7 @@ defmodule LEDTest do
     end
 
     test "sets gpio led to blinking at 100ms for 2 times" do
-      pid = start_link_supervised!({LED, gpio_pin: 23, name: :timer_test3})
+      pid = start_link_supervised!({LED, gpio_pin: "GPIO23", name: :timer_test3})
       assert pid |> is_pid()
 
       LED.blink(name: :timer_test3, interval: 50, times: 2)
@@ -219,7 +219,7 @@ defmodule LEDTest do
 
   describe "repeat/2" do
     test "does not cancel old timers before starting for artful behaviour" do
-      pid = start_link_supervised!({LED, gpio_pin: 24, name: :repeat_test})
+      pid = start_link_supervised!({LED, gpio_pin: "GPIO24", name: :repeat_test})
       assert pid |> is_pid()
 
       # Pattern should be (> = trigger on/off)
