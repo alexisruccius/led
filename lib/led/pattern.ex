@@ -173,7 +173,7 @@ defmodule LED.Pattern do
   @impl GenServer
   @spec handle_cast(:play, t()) :: {:noreply, t()}
   def handle_cast(:play, %__MODULE__{} = pattern) do
-    send(self(), :trigger)
+    if pattern.trigger_ref |> is_nil(), do: send(self(), :trigger)
     {:noreply, pattern}
   end
 

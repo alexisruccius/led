@@ -177,6 +177,20 @@ defmodule LED.PatternTest do
       assert pattern3 = :sys.get_state(Pattern)
       assert pattern1 != pattern3
     end
+
+    test "does not send :trigger when there is a trigger_ref (pattern is playing)" do
+      start_link_supervised!({Pattern, intervals: [5], durations: [30]})
+      # wait for 1 trigger
+      Process.sleep(7)
+      assert %Pattern{trigger_ref: trigger_ref1} = :sys.get_state(Pattern)
+      assert trigger_ref1 |> is_reference()
+      assert :ok = Pattern.play()
+      Process.sleep(2)
+      assert %Pattern{trigger_ref: trigger_ref2} = :sys.get_state(Pattern)
+      assert trigger_ref2 |> is_reference()
+      # no new trigger_ref from a play :trigger
+      assert trigger_ref1 == trigger_ref2
+    end
   end
 
   describe "handle_info/2" do
