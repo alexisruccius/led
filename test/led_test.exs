@@ -167,9 +167,9 @@ defmodule LEDTest do
       # 2 Hz is a interval of 250ms
       LED.blink(name: :blink_test_led)
       assert %LED{state: 1} = :sys.get_state(:blink_test_led)
-      :timer.sleep(300)
+      Process.sleep(300)
       assert %LED{state: 0} = :sys.get_state(:blink_test_led)
-      :timer.sleep(250)
+      Process.sleep(250)
       assert %LED{state: 1} = :sys.get_state(:blink_test_led)
     end
 
@@ -178,11 +178,11 @@ defmodule LEDTest do
       assert pid |> is_pid()
 
       LED.blink(name: :timer_test1, interval: 100)
-      :timer.sleep(20)
+      Process.sleep(20)
       assert %LED{state: 1} = :sys.get_state(:timer_test1)
-      :timer.sleep(100)
+      Process.sleep(100)
       assert %LED{state: 0} = :sys.get_state(:timer_test1)
-      :timer.sleep(100)
+      Process.sleep(100)
       assert %LED{state: 1} = :sys.get_state(:timer_test1)
     end
 
@@ -191,13 +191,13 @@ defmodule LEDTest do
       assert pid |> is_pid()
 
       LED.blink(name: :timer_test3, interval: 50, times: 2)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 1} = :sys.get_state(:timer_test3)
-      :timer.sleep(50)
+      Process.sleep(50)
       assert %LED{state: 0} = :sys.get_state(:timer_test3)
-      :timer.sleep(50)
+      Process.sleep(50)
       assert %LED{state: 1} = :sys.get_state(:timer_test3)
-      :timer.sleep(100)
+      Process.sleep(100)
       assert %LED{state: 0} = :sys.get_state(:timer_test3)
     end
   end
@@ -208,9 +208,9 @@ defmodule LEDTest do
       # 2 Hz is a interval of 250ms
       LED.repeat()
       assert %LED{state: 1} = :sys.get_state(LED)
-      :timer.sleep(260)
+      Process.sleep(260)
       assert %LED{state: 0} = :sys.get_state(LED)
-      :timer.sleep(250)
+      Process.sleep(250)
       assert %LED{state: 1} = :sys.get_state(LED)
     end
   end
@@ -231,23 +231,23 @@ defmodule LEDTest do
       LED.repeat(name: :repeat_test, interval: 50)
       LED.repeat(name: :repeat_test, interval: 20)
       assert %LED{state: 1} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 1} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 0} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 0} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 1} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 0} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 0} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 0} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 1} = :sys.get_state(:repeat_test)
-      :timer.sleep(10)
+      Process.sleep(10)
       assert %LED{state: 1} = :sys.get_state(:repeat_test)
     end
   end
