@@ -1,5 +1,5 @@
 defmodule LED.PatternTest do
-  use ExUnit.Case, async: true, group: :pattern_tests
+  use ExUnit.Case, async: true, group: :led_tests
 
   alias LED.Pattern
 

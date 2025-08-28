@@ -1,5 +1,5 @@
 defmodule LED.TimerTest do
-  use ExUnit.Case, async: true, group: :timer_tests
+  use ExUnit.Case, async: true
 
   alias LED.Timer
 
