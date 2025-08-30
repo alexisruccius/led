@@ -58,8 +58,8 @@ defmodule LED.PatternTest do
     test "resets the intervals and durations from the programm map" do
       start_link_supervised!({Pattern, intervals: [5, 6, 7], durations: [10, 20]})
 
-      # wait for 2 triggers
-      Process.sleep(23)
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert :ok = Pattern.reset()
       assert %Pattern{intervals: [5, 6, 7], durations: [10, 20]} = :sys.get_state(Pattern)
     end
@@ -67,8 +67,9 @@ defmodule LED.PatternTest do
     test "stops all timer_refs in the LED GenServer and sets LED state to off (0)" do
       start_link_supervised!({LED, name: :reset_led})
       start_link_supervised!({Pattern, led_name: :reset_led, intervals: [250]})
-      # wait for trigger
-      Process.sleep(7)
+
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert :ok = Pattern.reset()
       # wait for LED
       Process.sleep(2)
@@ -86,8 +87,8 @@ defmodule LED.PatternTest do
          durations: [10, 20]}
       )
 
-      # wait for 2 triggers
-      Process.sleep(23)
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert :ok = Pattern.reset(:reset_pattern)
       assert %Pattern{intervals: [5, 6, 7], durations: [10, 20]} = :sys.get_state(:reset_pattern)
     end
@@ -97,8 +98,8 @@ defmodule LED.PatternTest do
     test "trigger_ref in module struct" do
       start_link_supervised!({Pattern, intervals: [10], durations: [100]})
 
-      # wait for trigger
-      Process.sleep(16)
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert %Pattern{trigger_ref: trigger_ref} = :sys.get_state(Pattern)
       assert trigger_ref |> is_reference()
     end
@@ -116,8 +117,8 @@ defmodule LED.PatternTest do
     test "pauses blinking without terminating the pattern process" do
       start_link_supervised!({Pattern, intervals: [5, 6, 7], durations: [10, 20]})
 
-      # wait for 1 triggers
-      Process.sleep(16)
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert :ok = Pattern.pause()
       assert pattern1 = :sys.get_state(Pattern)
       # should not change after 10ms
@@ -129,8 +130,9 @@ defmodule LED.PatternTest do
     test "sets LED off (0)" do
       start_link_supervised!({LED, name: :pause_led})
       start_link_supervised!({Pattern, led_name: :pause_led, intervals: [250]})
-      # wait for trigger
-      Process.sleep(7)
+
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert :ok = Pattern.pause()
       # wait for LED
       Process.sleep(2)
@@ -148,8 +150,8 @@ defmodule LED.PatternTest do
          durations: [10, 20]}
       )
 
-      # wait for 1 triggers
-      Process.sleep(16)
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert :ok = Pattern.pause(:pause_pattern)
       assert pattern1 = :sys.get_state(:pause_pattern)
       # should not change after 10ms
@@ -163,7 +165,7 @@ defmodule LED.PatternTest do
     test "resumes the blinking pattern" do
       start_link_supervised!({Pattern, intervals: [5, 10, 7], durations: [100]})
 
-      # wait for 1 triggers
+      # wait for 1 trigger (duration)
       Process.sleep(12)
       assert :ok = Pattern.pause()
       assert pattern1 = :sys.get_state(Pattern)
@@ -180,8 +182,9 @@ defmodule LED.PatternTest do
 
     test "does not send :trigger when there is a trigger_ref (pattern is playing)" do
       start_link_supervised!({Pattern, intervals: [5], durations: [30]})
-      # wait for 1 trigger
-      Process.sleep(7)
+
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert %Pattern{trigger_ref: trigger_ref1} = :sys.get_state(Pattern)
       assert trigger_ref1 |> is_reference()
       assert :ok = Pattern.play()
@@ -201,23 +204,25 @@ defmodule LED.PatternTest do
         {Pattern, led_name: :pattern_test_led, intervals: [10], durations: [100]}
       )
 
-      # wait 6ms for first :trigger message
-      Process.sleep(6)
-      assert %LED{state: 1} = :sys.get_state(:pattern_test_led)
+      # wait for 1 trigger (duration)
       Process.sleep(12)
+      assert %LED{state: 1} = :sys.get_state(:pattern_test_led)
+      Process.sleep(10)
       assert %LED{state: 0} = :sys.get_state(:pattern_test_led)
     end
 
     test "handles overlapping? == true" do
       start_link_supervised!({Pattern, overlapping?: true})
-      # wait more than 6ms for first :trigger message
-      Process.sleep(10)
+
+      # wait for 1 trigger (duration)
+      Process.sleep(12)
       assert %Pattern{overlapping?: true} = :sys.get_state(Pattern)
     end
 
     test "handles false overlapping? type" do
       start_link_supervised!({Pattern, overlapping?: "not_boolean"})
-      # wait more than 6ms for first :trigger message
+
+      # wait for 1 trigger (duration)
       Process.sleep(10)
       assert %Pattern{overlapping?: false} = :sys.get_state(Pattern)
     end
