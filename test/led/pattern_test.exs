@@ -196,6 +196,42 @@ defmodule LED.PatternTest do
     end
   end
 
+  describe "change/1" do
+    test "changes led_name of the pattern" do
+      start_link_supervised!({Pattern, led_name: :red_led})
+
+      assert %{led_name: :red_led} = :sys.get_state(Pattern)
+      Pattern.change(led_name: :green_led)
+      assert %{led_name: :green_led} = :sys.get_state(Pattern)
+    end
+
+    test "changes the intervals of the pattern" do
+      start_link_supervised!({Pattern, intervals: [10], durations: [100]})
+
+      assert %{intervals: [10]} = :sys.get_state(Pattern)
+      Pattern.change(intervals: [6])
+      assert %{intervals: [6]} = :sys.get_state(Pattern)
+      assert %{programm: %{intervals: [6]}} = :sys.get_state(Pattern)
+    end
+
+    test "changes the durations of the pattern" do
+      start_link_supervised!({Pattern, durations: [10]})
+
+      assert %{durations: [10]} = :sys.get_state(Pattern)
+      Pattern.change(durations: [6])
+      assert %{durations: [6]} = :sys.get_state(Pattern)
+      assert %{programm: %{durations: [6]}} = :sys.get_state(Pattern)
+    end
+
+    test "changes overlapping? of the pattern" do
+      start_link_supervised!({Pattern, overlapping?: false})
+
+      assert %{overlapping?: false} = :sys.get_state(Pattern)
+      Pattern.change(overlapping?: true)
+      assert %{overlapping?: true} = :sys.get_state(Pattern)
+    end
+  end
+
   describe "handle_info/2" do
     test "triggers LED.blink" do
       start_link_supervised!({LED, name: :pattern_test_led})

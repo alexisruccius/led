@@ -140,6 +140,27 @@ defmodule LED.Pattern do
     GenServer.cast(name, :reset)
   end
 
+  @doc """
+  Updates the running pattern with new options.
+
+  You can dynamically change the blink `:intervals`, adjust `:durations`,
+  switch the target `:led_name`, or toggle `:overlapping?` for stacking
+  multiple patterns without cancellation.
+
+  ## Example
+
+      LED.Pattern.change(:my_pattern,
+        intervals: [100, 200, 300],
+        durations: [500, 750],
+        led_name: :blue_led,
+        overlapping?: true
+      )
+  """
+  @spec change(GenServer.server(), keyword()) :: :ok
+  def change(name \\ __MODULE__, opts) do
+    GenServer.cast(name, {:change, opts})
+  end
+
   # callbacks
 
   @impl GenServer
@@ -150,13 +171,7 @@ defmodule LED.Pattern do
     durations = args |> Keyword.get(:durations) |> if_empty(default_durations())
     overlapping? = args |> Keyword.get(:overlapping?) |> if_not_boolean(false)
 
-    pattern = %__MODULE__{
-      led_name: led_name,
-      intervals: intervals,
-      durations: durations,
-      overlapping?: overlapping?,
-      programm: %{intervals: intervals, durations: durations}
-    }
+    pattern = pattern(led_name, intervals, durations, overlapping?)
 
     Process.send_after(self(), :trigger, 6)
     {:ok, pattern}
@@ -183,6 +198,19 @@ defmodule LED.Pattern do
     %__MODULE__{led_name: led_name, programm: programm} = pattern
     LED.off(led_name)
     {:noreply, pattern |> struct!(intervals: programm.intervals, durations: programm.durations)}
+  end
+
+  @impl GenServer
+  @spec handle_cast({:change, keyword()}, t()) :: {:noreply, t()}
+  def handle_cast({:change, opts}, %__MODULE__{} = pattern) do
+    led_name = Keyword.get(opts, :led_name, pattern.led_name)
+    intervals = Keyword.get(opts, :intervals, pattern.programm.intervals)
+    durations = Keyword.get(opts, :durations, pattern.programm.durations)
+    overlapping? = Keyword.get(opts, :overlapping?, pattern.overlapping?)
+
+    changed_pattern = pattern(led_name, intervals, durations, overlapping?)
+
+    {:noreply, changed_pattern}
   end
 
   @impl GenServer
@@ -224,4 +252,14 @@ defmodule LED.Pattern do
 
   defp cancel_trigger(trigger_ref) when not is_reference(trigger_ref), do: false
   defp cancel_trigger(trigger_ref), do: Process.cancel_timer(trigger_ref)
+
+  defp pattern(led_name, intervals, durations, overlapping?) do
+    %__MODULE__{
+      led_name: led_name,
+      intervals: intervals,
+      durations: durations,
+      overlapping?: overlapping?,
+      programm: %{intervals: intervals, durations: durations}
+    }
+  end
 end
