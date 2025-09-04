@@ -25,26 +25,36 @@ defmodule LED.Pattern do
   @doc since: "0.2.0"
 
   use GenServer
+  require Logger
 
   @type t() :: %__MODULE__{
           led_name: GenServer.name(),
           intervals: list(pos_integer()),
           durations: list(pos_integer()),
           overlapping?: boolean(),
-          reset_points: list(pos_integer()),
-          programm: map()
+          resets: list(pos_integer()),
+          program: map()
         }
   defstruct led_name: LED,
-            intervals: [],
-            durations: [],
+            intervals: [100, 25],
+            durations: [500, 250, 500],
             overlapping?: false,
-            reset_points: nil,
-            programm: %{},
+            resets: nil,
+            program: %{},
             trigger_ref: nil
 
-  @spec start_link(Keyword.t()) :: GenServer.on_start()
+  @type options :: [
+          {:name, atom()},
+          {:led_name, GenServer.name()},
+          {:intervals, [pos_integer()]},
+          {:durations, [pos_integer()]},
+          {:overlapping?, boolean()},
+          {:resets, [pos_integer()]}
+        ]
+
   @doc """
   Starts the LED.Pattern GenServer.
+
 
   ## Options
 
@@ -54,7 +64,7 @@ defmodule LED.Pattern do
     * `:intervals` – list of blink intervals in ms (defaults to [100, 25])
     * `:durations` – list of durations in ms after which a new blink interval is selected (defaults to `[500, 250, 500]`)
     * `:overlapping?` – if `true`, pattern timers overlap for polyrhythmic or experimental effects (defaults to `false` -> normal blinking)
-    * `:reset_points` – list of times in ms when the pattern sequence resets.
+    * `:resets` – list of times in ms when the pattern sequence resets.
       If `nil` (default), the pattern runs continuously without resets.
 
 
@@ -72,7 +82,7 @@ defmodule LED.Pattern do
       ...> name: :green_sparkle,
       ...> led_name: :green_led,
       ...> intervals: [100, 200],
-      ...> changes: [300, 400],
+      ...> durations: [300, 400],
       ...> overlapping?: true
       ...> )
 
@@ -80,14 +90,14 @@ defmodule LED.Pattern do
       ...> name: :green_beat,
       ...> led_name: :green_led,
       ...> intervals: [20, 40, 80],
-      ...> changes: [150],
+      ...> durations: [150],
       ...> overlapping?: true
       ...> )
 
   ...>
   """
   @doc since: "0.2.0"
-  @spec start_link(Keyword.t()) :: GenServer.on_start()
+  @spec start_link(options()) :: GenServer.on_start()
   def start_link(args \\ []) do
     name = Keyword.get(args, :name, __MODULE__)
     GenServer.start_link(__MODULE__, args, name: name)
@@ -161,10 +171,10 @@ defmodule LED.Pattern do
      ...> durations: [500, 750],
      ...> led_name: :blue_led,
      ...> overlapping?: true,
-     ...> reset_points: [1500, 2000]
+     ...> resets: [1500, 2000]
      ...> )
   """
-  @spec change(GenServer.server(), keyword()) :: :ok
+  @spec change(GenServer.server(), options()) :: :ok
   def change(name \\ __MODULE__, opts) do
     GenServer.cast(name, {:change, opts})
   end
@@ -172,17 +182,11 @@ defmodule LED.Pattern do
   # callbacks
 
   @impl GenServer
-  @spec init(Keyword.t()) :: {:ok, t()}
+  @spec init(options()) :: {:ok, t()}
   def init(args) do
-    led_name = Keyword.get(args, :led_name, LED)
-    intervals = args |> Keyword.get(:intervals) |> if_empty(default_intervals())
-    durations = args |> Keyword.get(:durations) |> if_empty(default_durations())
-    overlapping? = args |> Keyword.get(:overlapping?) |> if_not_boolean(false)
-    reset_points = args |> Keyword.get(:reset_points)
-
-    pattern = pattern(led_name, intervals, durations, overlapping?, reset_points)
+    pattern = build_pattern(args)
     send(self(), :trigger)
-    {:ok, pattern |> send_reset_point()}
+    {:ok, pattern |> send_reset()}
   end
 
   @impl GenServer
@@ -190,7 +194,7 @@ defmodule LED.Pattern do
   def handle_cast(:pause, %__MODULE__{} = pattern) do
     cancel_trigger(pattern.trigger_ref)
     LED.off(pattern.led_name)
-    {:noreply, pattern |> struct!(trigger_ref: nil)}
+    {:noreply, %{pattern | trigger_ref: nil}}
   end
 
   @impl GenServer
@@ -201,100 +205,87 @@ defmodule LED.Pattern do
   end
 
   @impl GenServer
-  @spec handle_cast(:reset, t()) :: {:noreply, t()}
-  def handle_cast(:reset, %__MODULE__{} = pattern) do
-    %__MODULE__{led_name: led_name, programm: programm} = pattern
-    LED.off(led_name)
-    {:noreply, pattern |> struct!(intervals: programm.intervals, durations: programm.durations)}
+  @spec handle_cast({:change, options()}, t()) :: {:noreply, t()}
+  def handle_cast({:change, opts}, %__MODULE__{} = pattern) do
+    defaults = pattern |> reset_to_program()
+    changed_pattern = build_pattern(opts, defaults)
+    {:noreply, changed_pattern}
   end
 
   @impl GenServer
-  @spec handle_cast({:change, keyword()}, t()) :: {:noreply, t()}
-  def handle_cast({:change, opts}, %__MODULE__{} = pattern) do
-    led_name = Keyword.get(opts, :led_name, pattern.led_name)
-    intervals = Keyword.get(opts, :intervals, pattern.programm.intervals)
-    durations = Keyword.get(opts, :durations, pattern.programm.durations)
-    overlapping? = Keyword.get(opts, :overlapping?, pattern.overlapping?)
-    reset_points = Keyword.get(opts, :reset_points, pattern.reset_points)
+  @spec handle_cast(:reset, t()) :: {:noreply, t()}
+  def handle_cast(:reset, %__MODULE__{} = pattern) do
+    LED.off(pattern.led_name)
+    {:noreply, pattern |> reset_to_program()}
+  end
 
-    changed_pattern = pattern(led_name, intervals, durations, overlapping?, reset_points)
+  # handle_info
 
-    {:noreply, changed_pattern}
+  @impl GenServer
+  @spec handle_info(:reset, t()) :: {:noreply, t()}
+  def handle_info(:reset, %__MODULE__{} = pattern) do
+    LED.off(pattern.led_name)
+    {:noreply, pattern |> reset_to_program() |> send_reset()}
   end
 
   @impl GenServer
   @spec handle_info(:trigger, t()) :: {:noreply, t()}
   def handle_info(:trigger, %__MODULE__{} = pattern) do
-    %__MODULE__{
-      intervals: intervals,
-      durations: durations,
-      led_name: led_name,
-      overlapping?: overlapping?,
-      programm: programm
-    } =
-      pattern
+    [interval_ms | intervals_rest] = pattern.intervals |> fallback(pattern.program.intervals)
+    [duration_ms | durations_rest] = pattern.durations |> fallback(pattern.program.durations)
 
-    [interval_ms | intervals_rest] = if_empty(intervals, programm.intervals)
-    [duration_ms | durations_rest] = if_empty(durations, programm.durations)
+    opts = [interval: interval_ms, name: pattern.led_name]
 
-    trigger_led(overlapping?, interval: interval_ms, name: led_name)
+    if pattern.overlapping?, do: LED.repeat(opts), else: LED.blink(opts)
 
     trigger_ref = Process.send_after(self(), :trigger, duration_ms)
 
     {:noreply,
-     pattern
-     |> struct!(intervals: intervals_rest, durations: durations_rest, trigger_ref: trigger_ref)}
+     %{pattern | intervals: intervals_rest, durations: durations_rest, trigger_ref: trigger_ref}}
   end
 
-  @impl GenServer
-  @spec handle_info(:reset, t()) :: {:noreply, t()}
-  def handle_info(:reset, %__MODULE__{} = pattern) do
-    %__MODULE__{led_name: led_name, programm: programm} = pattern
-    LED.off(led_name)
+  # private funs
 
-    new_pattern =
-      pattern
-      |> struct!(intervals: programm.intervals, durations: programm.durations)
-      |> send_reset_point()
+  defp build_pattern(opts, defaults \\ %__MODULE__{}) do
+    led_name = Keyword.get(opts, :led_name, defaults.led_name)
+    intervals = opts |> Keyword.get(:intervals) |> fallback(defaults.intervals)
+    durations = opts |> Keyword.get(:durations) |> fallback(defaults.durations)
+    overlapping? = opts |> Keyword.get(:overlapping?, false) |> if_not_boolean(false)
+    resets = opts |> Keyword.get(:resets)
 
-    {:noreply, new_pattern}
-  end
-
-  defp if_empty(nil, default), do: default
-  defp if_empty([], default_or_programm), do: default_or_programm
-  defp if_empty(list, _default_or_programm), do: list
-
-  defp if_not_boolean(term, value) when not is_boolean(term), do: value
-  defp if_not_boolean(term, _value), do: term
-
-  defp trigger_led(false = _overlapping?, opts), do: LED.blink(opts)
-  defp trigger_led(true = _overlapping?, opts), do: LED.repeat(opts)
-
-  defp default_intervals, do: [100, 25]
-  defp default_durations, do: [500, 250, 500]
-
-  defp cancel_trigger(trigger_ref) when not is_reference(trigger_ref), do: false
-  defp cancel_trigger(trigger_ref), do: Process.cancel_timer(trigger_ref)
-
-  defp pattern(led_name, intervals, durations, overlapping?, reset_points) do
     %__MODULE__{
       led_name: led_name,
       intervals: intervals,
       durations: durations,
       overlapping?: overlapping?,
-      reset_points: reset_points,
-      programm: %{intervals: intervals, durations: durations, reset_points: reset_points}
+      resets: resets,
+      program: %{intervals: intervals, durations: durations, resets: resets}
     }
   end
 
-  defp send_reset_point(%__MODULE__{reset_points: reset_points} = pattern)
-       when is_nil(reset_points) do
-    pattern
+  defp fallback(nil, default), do: default
+  defp fallback([], default_or_program), do: default_or_program
+  defp fallback(list, _default_or_program), do: list
+
+  defp reset_to_program(%__MODULE__{} = pattern) do
+    %{pattern | intervals: pattern.program.intervals, durations: pattern.program.durations}
   end
 
-  defp send_reset_point(%__MODULE__{} = pattern) do
-    [reset_ms | reset_points_rest] = if_empty(pattern.reset_points, pattern.programm.reset_points)
+  defp if_not_boolean(term, value) when not is_boolean(term) do
+    Logger.warning("\"#{term}\" for :overlapping? is not a boolean, false is used as default.")
+    value
+  end
+
+  defp if_not_boolean(term, _value), do: term
+
+  defp cancel_trigger(trigger_ref) when not is_reference(trigger_ref), do: false
+  defp cancel_trigger(trigger_ref), do: Process.cancel_timer(trigger_ref)
+
+  defp send_reset(%__MODULE__{resets: resets} = pattern) when is_nil(resets), do: pattern
+
+  defp send_reset(%__MODULE__{} = pattern) do
+    [reset_ms | resets_rest] = fallback(pattern.resets, pattern.program.resets)
     Process.send_after(self(), :reset, reset_ms)
-    pattern |> struct!(reset_points: reset_points_rest)
+    %{pattern | resets: resets_rest}
   end
 end

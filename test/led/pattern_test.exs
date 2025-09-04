@@ -32,7 +32,7 @@ defmodule LED.PatternTest do
          intervals: [10, 20, 30],
          durations: [30, 20, 10],
          overlapping?: true,
-         reset_points: [2000, 1000]}
+         resets: [2000, 1000]}
       )
 
       # first interval, duration, and reset_point is used immediately
@@ -41,8 +41,8 @@ defmodule LED.PatternTest do
                intervals: [20, 30],
                durations: [20, 10],
                overlapping?: true,
-               reset_points: [1000],
-               programm: %{intervals: [10, 20, 30], durations: [30, 20, 10]}
+               resets: [1000],
+               program: %{intervals: [10, 20, 30], durations: [30, 20, 10]}
              } = :sys.get_state(:my_pattern)
     end
 
@@ -53,13 +53,13 @@ defmodule LED.PatternTest do
       assert %Pattern{
                intervals: [25],
                durations: [250, 500],
-               programm: %{intervals: [100, 25], durations: [500, 250, 500]}
+               program: %{intervals: [100, 25], durations: [500, 250, 500]}
              } = :sys.get_state(Pattern)
     end
   end
 
   describe "reset/0" do
-    test "resets the intervals and durations from the programm map" do
+    test "resets the intervals and durations from the program map" do
       start_link_supervised!({Pattern, intervals: [5, 6, 7], durations: [10, 20]})
 
       # first interval, duration are used immediately after init
@@ -216,7 +216,7 @@ defmodule LED.PatternTest do
       assert %{intervals: [20]} = :sys.get_state(Pattern)
       Pattern.change(intervals: [6])
       assert %{intervals: [6]} = :sys.get_state(Pattern)
-      assert %{programm: %{intervals: [6]}} = :sys.get_state(Pattern)
+      assert %{program: %{intervals: [6]}} = :sys.get_state(Pattern)
     end
 
     test "changes the durations of the pattern" do
@@ -226,7 +226,7 @@ defmodule LED.PatternTest do
       assert %{durations: [20]} = :sys.get_state(Pattern)
       Pattern.change(durations: [6])
       assert %{durations: [6]} = :sys.get_state(Pattern)
-      assert %{programm: %{durations: [6]}} = :sys.get_state(Pattern)
+      assert %{program: %{durations: [6]}} = :sys.get_state(Pattern)
     end
 
     test "changes overlapping? of the pattern" do
@@ -237,12 +237,12 @@ defmodule LED.PatternTest do
       assert %{overlapping?: true} = :sys.get_state(Pattern)
     end
 
-    test "changes the reset_points of the pattern" do
-      start_link_supervised!({Pattern, reset_points: [100, 200]})
+    test "changes the resets of the pattern" do
+      start_link_supervised!({Pattern, resets: [100, 200]})
 
-      assert %{reset_points: [200]} = :sys.get_state(Pattern)
-      Pattern.change(reset_points: [69, 269])
-      assert %{reset_points: [69, 269]} = :sys.get_state(Pattern)
+      assert %{resets: [200]} = :sys.get_state(Pattern)
+      Pattern.change(resets: [69, 269])
+      assert %{resets: [69, 269]} = :sys.get_state(Pattern)
     end
   end
 
@@ -257,7 +257,7 @@ defmodule LED.PatternTest do
       # should be triggerd on initially
       assert %LED{state: 1} = :sys.get_state(:pattern_test_led)
       # wait for 2 trigger (interval)
-      Process.sleep(6)
+      Process.sleep(7)
       assert %LED{state: 0} = :sys.get_state(:pattern_test_led)
     end
 
@@ -277,21 +277,21 @@ defmodule LED.PatternTest do
       assert %Pattern{overlapping?: false} = :sys.get_state(Pattern)
     end
 
-    test "handles :reset_points list" do
-      start_link_supervised!({Pattern, reset_points: [10, 30]})
+    test "handles :resets list" do
+      start_link_supervised!({Pattern, resets: [10, 30]})
 
       # first reset timer should be send in init
-      assert %Pattern{reset_points: [30]} = :sys.get_state(Pattern)
+      assert %Pattern{resets: [30]} = :sys.get_state(Pattern)
     end
 
-    test ":reset_points reset durations" do
-      start_link_supervised!({Pattern, durations: [6, 7, 8], reset_points: [3, 30]})
+    test ":resets reset durations" do
+      start_link_supervised!({Pattern, durations: [6, 7, 8], resets: [3, 30]})
 
       # first duration and reset_point should be used immediately
-      assert %Pattern{durations: [7, 8], reset_points: [30]} = :sys.get_state(Pattern)
+      assert %Pattern{durations: [7, 8], resets: [30]} = :sys.get_state(Pattern)
       # wait for first reset
       Process.sleep(4)
-      assert %Pattern{durations: [6, 7, 8], reset_points: []} = :sys.get_state(Pattern)
+      assert %Pattern{durations: [6, 7, 8], resets: []} = :sys.get_state(Pattern)
     end
   end
 end
