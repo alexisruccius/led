@@ -207,9 +207,8 @@ defmodule LED.Pattern do
   @impl GenServer
   @spec handle_cast({:change, options()}, t()) :: {:noreply, t()}
   def handle_cast({:change, opts}, %__MODULE__{} = pattern) do
-    # defaults = pattern |> reset_to_program()
     changed_pattern = build_pattern(opts, pattern)
-    {:noreply, changed_pattern}
+    {:noreply, changed_pattern |> send_reset(pattern)}
   end
 
   @impl GenServer
@@ -291,5 +290,18 @@ defmodule LED.Pattern do
     [reset_ms | resets_rest] = fallback(pattern.resets, pattern.program.resets)
     Process.send_after(self(), :reset, reset_ms)
     %{pattern | resets: resets_rest}
+  end
+
+  # send initial :reset, if changed from nil
+  defp send_reset(
+         %__MODULE__{resets: resets} = changed_pattern,
+         %__MODULE__{resets: nil} = _old_pattern
+       )
+       when is_list(resets) do
+    changed_pattern |> send_reset()
+  end
+
+  defp send_reset(%__MODULE__{} = changed_pattern, %__MODULE__{} = _old_pattern) do
+    changed_pattern
   end
 end
