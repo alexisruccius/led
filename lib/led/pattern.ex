@@ -247,10 +247,10 @@ defmodule LED.Pattern do
 
   defp build_pattern(opts, defaults \\ %__MODULE__{}) do
     led_name = Keyword.get(opts, :led_name, defaults.led_name)
-    intervals = opts |> Keyword.get(:intervals)
-    durations = opts |> Keyword.get(:durations)
+    intervals = opts |> Keyword.get(:intervals, :not_set)
+    durations = opts |> Keyword.get(:durations, :not_set)
     overlapping? = opts |> Keyword.get(:overlapping?, false) |> if_not_boolean(false)
-    resets = opts |> Keyword.get(:resets)
+    resets = opts |> Keyword.get(:resets, :not_set)
 
     %__MODULE__{
       led_name: led_name,
@@ -266,7 +266,8 @@ defmodule LED.Pattern do
     }
   end
 
-  defp fallback(nil, default), do: default
+  defp fallback(nil, _default), do: nil
+  defp fallback(:not_set, default), do: default
   defp fallback([], default_or_program), do: default_or_program
   defp fallback(list, _default_or_program), do: list
 

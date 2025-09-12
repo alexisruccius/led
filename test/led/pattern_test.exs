@@ -281,6 +281,14 @@ defmodule LED.PatternTest do
       Pattern.change(resets: [69, 269])
       assert %{resets: [269]} = :sys.get_state(Pattern)
     end
+
+    test "if resets are changed to nil, it stays nil" do
+      start_link_supervised!({Pattern, resets: [5, 10]})
+
+      assert %{resets: [10]} = :sys.get_state(Pattern)
+      Pattern.change(resets: nil)
+      assert %{resets: nil} = :sys.get_state(Pattern)
+    end
   end
 
   describe "handle_info/2" do
