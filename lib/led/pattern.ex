@@ -40,7 +40,7 @@ defmodule LED.Pattern do
             durations: [500, 250, 500],
             overlapping?: false,
             resets: nil,
-            program: %{},
+            program: %{intervals: [100, 25], durations: [500, 250, 500], resets: nil},
             trigger_ref: nil
 
   @type options :: [
@@ -207,8 +207,8 @@ defmodule LED.Pattern do
   @impl GenServer
   @spec handle_cast({:change, options()}, t()) :: {:noreply, t()}
   def handle_cast({:change, opts}, %__MODULE__{} = pattern) do
-    defaults = pattern |> reset_to_program()
-    changed_pattern = build_pattern(opts, defaults)
+    # defaults = pattern |> reset_to_program()
+    changed_pattern = build_pattern(opts, pattern)
     {:noreply, changed_pattern}
   end
 
@@ -248,18 +248,22 @@ defmodule LED.Pattern do
 
   defp build_pattern(opts, defaults \\ %__MODULE__{}) do
     led_name = Keyword.get(opts, :led_name, defaults.led_name)
-    intervals = opts |> Keyword.get(:intervals) |> fallback(defaults.intervals)
-    durations = opts |> Keyword.get(:durations) |> fallback(defaults.durations)
+    intervals = opts |> Keyword.get(:intervals)
+    durations = opts |> Keyword.get(:durations)
     overlapping? = opts |> Keyword.get(:overlapping?, false) |> if_not_boolean(false)
     resets = opts |> Keyword.get(:resets)
 
     %__MODULE__{
       led_name: led_name,
-      intervals: intervals,
-      durations: durations,
+      intervals: fallback(intervals, defaults.intervals),
+      durations: fallback(durations, defaults.durations),
       overlapping?: overlapping?,
-      resets: resets,
-      program: %{intervals: intervals, durations: durations, resets: resets}
+      resets: fallback(resets, defaults.resets),
+      program: %{
+        intervals: fallback(intervals, defaults.program.intervals),
+        durations: fallback(durations, defaults.program.durations),
+        resets: fallback(resets, defaults.program.resets)
+      }
     }
   end
 

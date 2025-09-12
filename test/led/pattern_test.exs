@@ -219,6 +219,16 @@ defmodule LED.PatternTest do
       assert %{program: %{intervals: [6]}} = :sys.get_state(Pattern)
     end
 
+    test "preserves the intervals correctly if NOT changed" do
+      start_link_supervised!({Pattern, intervals: [5, 15, 35]})
+
+      # first interval used immediately after init
+      assert %{intervals: [15, 35]} = :sys.get_state(Pattern)
+      Pattern.change(overlapping?: true)
+      assert %{intervals: [15, 35]} = :sys.get_state(Pattern)
+      assert %{program: %{intervals: [5, 15, 35]}} = :sys.get_state(Pattern)
+    end
+
     test "changes the durations of the pattern" do
       start_link_supervised!({Pattern, durations: [10, 20]})
 
@@ -227,6 +237,16 @@ defmodule LED.PatternTest do
       Pattern.change(durations: [6])
       assert %{durations: [6]} = :sys.get_state(Pattern)
       assert %{program: %{durations: [6]}} = :sys.get_state(Pattern)
+    end
+
+    test "preserves the durations correctly if NOT changed" do
+      start_link_supervised!({Pattern, durations: [10, 20, 30]})
+
+      # first interval used immediately after init
+      assert %{durations: [20, 30]} = :sys.get_state(Pattern)
+      Pattern.change(overlapping?: true)
+      assert %{durations: [20, 30]} = :sys.get_state(Pattern)
+      assert %{program: %{durations: [10, 20, 30]}} = :sys.get_state(Pattern)
     end
 
     test "changes overlapping? of the pattern" do
@@ -243,6 +263,15 @@ defmodule LED.PatternTest do
       assert %{resets: [200]} = :sys.get_state(Pattern)
       Pattern.change(resets: [69, 269])
       assert %{resets: [69, 269]} = :sys.get_state(Pattern)
+    end
+
+    test "does NOT change resets to nil if resets are not given as an opt" do
+      start_link_supervised!({Pattern, resets: [100, 200]})
+
+      assert %{resets: [200]} = :sys.get_state(Pattern)
+      Pattern.change(overlapping?: true)
+      assert %{resets: [200]} = :sys.get_state(Pattern)
+      assert %{program: %{resets: [100, 200]}} = :sys.get_state(Pattern)
     end
   end
 
