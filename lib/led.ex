@@ -170,7 +170,33 @@ defmodule LED do
 
   require Logger
 
+  @type t() :: %__MODULE__{
+          name: GenServer.name(),
+          gpio_pin: GPIO.gpio_spec() | identifier(),
+          handle: GPIO.Handle.t(),
+          state: 0 | 1,
+          timer_refs: reference()
+        }
   defstruct name: nil, gpio_pin: nil, handle: nil, state: 0, timer_refs: []
+
+  @typedoc "Options for starting the LED GenServer"
+  @type start_options :: [
+          {:name, GenServer.name()},
+          {:gpio_pin, GPIO.gpio_spec() | identifier()},
+          {:initial_value, 0 | 1}
+        ]
+
+  @typedoc "Options for blink"
+  @type blink_options :: [
+          {:interval, pos_integer()},
+          {:times, integer()}
+        ]
+
+  @typedoc "Options for repeat"
+  @type repeat_options :: [
+          {:interval, pos_integer()},
+          {:times, integer()}
+        ]
 
   @gpio_pin "GPIO22"
   @initial_value 1
@@ -210,7 +236,7 @@ defmodule LED do
       true
   """
   @doc since: "0.1.0"
-  @spec start_link(keyword()) :: :ignore | {:error, any()} | {:ok, pid()}
+  @spec start_link(start_options()) :: :ignore | {:error, any()} | {:ok, pid()}
   def start_link(init_args \\ []) do
     name = Keyword.get(init_args, :name, __MODULE__)
     GenServer.start_link(__MODULE__, init_args, name: name)
@@ -237,7 +263,7 @@ defmodule LED do
       iex> LED.on(:led_green)
   """
   @doc since: "0.1.0"
-  @spec on(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
+  @spec on(GenServer.name()) :: :ok
   def on(name \\ __MODULE__), do: set(1, name)
 
   @doc """
@@ -261,7 +287,7 @@ defmodule LED do
       iex> LED.off(:led_yellow)
   """
   @doc since: "0.1.0"
-  @spec off(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
+  @spec off(GenServer.name()) :: :ok
   def off(name \\ __MODULE__), do: set(0, name)
 
   @doc """
@@ -282,7 +308,7 @@ defmodule LED do
       true
   """
   @doc since: "0.1.0"
-  @spec toggle(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: :ok
+  @spec toggle(GenServer.name()) :: :ok
   def toggle(name \\ __MODULE__) do
     if is_lit?(name), do: off(name), else: on(name)
   end
@@ -312,7 +338,7 @@ defmodule LED do
       false
   """
   @doc deprecated: "Use `lit?/1` instead"
-  @spec is_lit?(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: boolean()
+  @spec is_lit?(GenServer.name()) :: boolean()
   @doc since: "0.1.0"
   # credo:disable-for-next-line
   def is_lit?(name \\ __MODULE__) do
@@ -344,7 +370,7 @@ defmodule LED do
       iex> LED.lit?(:led_pink)
       false
   """
-  @spec lit?(atom() | pid() | {:global, any()} | {:via, atom(), any()}) :: boolean()
+  @spec lit?(GenServer.name()) :: boolean()
   @doc since: "0.1.1"
   def lit?(name \\ __MODULE__) do
     %LED{state: state} = :sys.get_state(name)
@@ -373,7 +399,7 @@ defmodule LED do
       :ok
   """
   @doc since: "0.1.0"
-  @spec blink(keyword()) :: :ok
+  @spec blink(blink_options()) :: :ok
   def blink(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
     interval = Keyword.get(opts, :interval, 250)
@@ -419,7 +445,7 @@ defmodule LED do
       iex> LED.cancel_timers(:green_led)
   """
   @doc since: "0.1.0"
-  @spec repeat(keyword()) :: :ok
+  @spec repeat(repeat_options()) :: :ok
   def repeat(opts \\ []) do
     name = Keyword.get(opts, :name, __MODULE__)
     interval = Keyword.get(opts, :interval, 250)
@@ -454,7 +480,7 @@ defmodule LED do
       iex> LED.set(1, :led_red)
   """
   @doc since: "0.1.0"
-  @spec set(0 | 1, atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
+  @spec set(0 | 1, GenServer.name()) :: :ok
   def set(state, name \\ __MODULE__)
 
   def set(state, name) when state == 0 or state == 1 do
@@ -484,11 +510,7 @@ defmodule LED do
       iex> LED.timer_start(300, 5, :led_blue)
   """
   @doc since: "0.1.0"
-  @spec timer_start(
-          integer(),
-          integer(),
-          atom() | pid() | {atom(), any()} | {:via, atom(), any()}
-        ) :: :ok
+  @spec timer_start(integer(), integer(), GenServer.name()) :: :ok
   def timer_start(interval, times \\ -1, name \\ __MODULE__) do
     GenServer.cast(name, {:timer_start, interval, times})
   end
@@ -509,7 +531,7 @@ defmodule LED do
       iex> LED.cancel_timers(:led_green)
   """
   @doc since: "0.1.0"
-  @spec cancel_timers(atom() | pid() | {atom(), any()} | {:via, atom(), any()}) :: :ok
+  @spec cancel_timers(GenServer.name()) :: :ok
   def cancel_timers(name \\ __MODULE__), do: GenServer.cast(name, :cancel_timers)
 
   # server callbacks
