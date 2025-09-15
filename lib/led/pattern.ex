@@ -183,6 +183,8 @@ defmodule LED.Pattern do
   switch the target `:led_name`, or toggle `:overlapping?` for stacking
   multiple patterns without cancellation.
 
+  Returns `:ok`, or `{:error, :no_led_process}` if no LED process with `:led_name` is started.
+
   ## Example
 
      iex> LED.Pattern.change(:my_pattern,
