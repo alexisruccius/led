@@ -7,24 +7,29 @@ defmodule LED.PatternTest do
 
   describe "start_link/1" do
     test "starts GenServer" do
-      {:ok, pid} = Pattern.start_link(led_name: :led_not_in_other_tests)
+      {:ok, pid_led} = LED.start_link(name: :pink_led)
+      {:ok, pid_pattern} = Pattern.start_link(led_name: :pink_led)
       assert %Pattern{} = :sys.get_state(Pattern)
-      assert :ok = GenServer.stop(pid)
+      assert :ok = GenServer.stop(pid_led)
+      assert :ok = GenServer.stop(pid_pattern)
     end
 
     test "sets GenServer name" do
+      start_link_supervised!(LED)
       {:ok, pid} = Pattern.start_link(name: :my_pattern)
-
       assert %Pattern{} = :sys.get_state(:my_pattern)
       assert :ok = GenServer.stop(pid)
     end
 
     test "sets default LED GenServer name" do
+      start_link_supervised!({LED, name: :red_led})
       start_link_supervised!({Pattern, led_name: :red_led})
       assert %Pattern{led_name: :red_led} = :sys.get_state(Pattern)
     end
 
     test "sets args into state" do
+      start_link_supervised!({LED, name: :green_led})
+
       start_link_supervised!(
         {Pattern,
          name: :my_pattern,
@@ -47,6 +52,7 @@ defmodule LED.PatternTest do
     end
 
     test "handle empty lists set for intervals and durations, and uses defaults" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [], durations: []})
 
       # first interval, duration are used immediately after init
@@ -56,10 +62,15 @@ defmodule LED.PatternTest do
                program: %{intervals: [100, 25], durations: [500, 250, 500]}
              } = :sys.get_state(Pattern)
     end
+
+    test "returns error when no LED process with :led_name" do
+      assert {:error, :no_led_process} = Pattern.start_link(led_name: :led_module_not_started)
+    end
   end
 
   describe "reset/0" do
     test "resets the intervals and durations from the program map" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [5, 6, 7], durations: [10, 20]})
 
       # first interval, duration are used immediately after init
@@ -84,12 +95,10 @@ defmodule LED.PatternTest do
 
   describe "reset/1" do
     test "resets works for other Pattern (GenServer) name" do
+      start_link_supervised!(LED)
+
       start_link_supervised!(
-        {Pattern,
-         name: :reset_pattern,
-         led_name: :led_not_in_other_tests,
-         intervals: [5, 6, 7],
-         durations: [10, 20]}
+        {Pattern, name: :reset_pattern, intervals: [5, 6, 7], durations: [10, 20]}
       )
 
       # first interval, duration are used immediately after init
@@ -101,6 +110,7 @@ defmodule LED.PatternTest do
 
   describe "pause/0" do
     test "trigger_ref in module struct" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [10], durations: [100]})
 
       # first :trigger immediately after init
@@ -109,6 +119,7 @@ defmodule LED.PatternTest do
     end
 
     test "handles empty trigger_ref == nil" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [10], durations: [100]})
 
       assert %Pattern{trigger_ref: trigger_ref} = :sys.get_state(Pattern)
@@ -122,6 +133,7 @@ defmodule LED.PatternTest do
     end
 
     test "pauses blinking without terminating the pattern process" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [2, 3, 4], durations: [4, 20]})
 
       # first interval, duration are used immediately after init
@@ -150,6 +162,8 @@ defmodule LED.PatternTest do
 
   describe "pause/1" do
     test "pause works for other Pattern (GenServer) name" do
+      start_link_supervised!(LED)
+
       start_link_supervised!(
         {Pattern, name: :pause_pattern, intervals: [2, 3, 4], durations: [4, 20]}
       )
@@ -167,6 +181,7 @@ defmodule LED.PatternTest do
 
   describe "play/0" do
     test "resumes the blinking pattern" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [5, 10, 7], durations: [100]})
 
       # wait for 1 trigger (duration)
@@ -185,6 +200,7 @@ defmodule LED.PatternTest do
     end
 
     test "does not send :trigger when there is a trigger_ref (pattern is playing)" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [5], durations: [30]})
 
       # wait for 1 trigger (duration)
@@ -202,6 +218,7 @@ defmodule LED.PatternTest do
 
   describe "change/1" do
     test "changes led_name of the pattern" do
+      start_link_supervised!({LED, name: :red_led})
       start_link_supervised!({Pattern, led_name: :red_led})
 
       assert %{led_name: :red_led} = :sys.get_state(Pattern)
@@ -210,6 +227,7 @@ defmodule LED.PatternTest do
     end
 
     test "changes the intervals of the pattern" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [10, 20], durations: [100]})
 
       # first interval used immediately after init
@@ -220,6 +238,7 @@ defmodule LED.PatternTest do
     end
 
     test "preserves the intervals correctly if NOT changed" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, intervals: [5, 15, 35]})
 
       # first interval used immediately after init
@@ -230,6 +249,7 @@ defmodule LED.PatternTest do
     end
 
     test "changes the durations of the pattern" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, durations: [10, 20]})
 
       # first interval used immediately after init
@@ -240,6 +260,7 @@ defmodule LED.PatternTest do
     end
 
     test "preserves the durations correctly if NOT changed" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, durations: [10, 20, 30]})
 
       # first interval used immediately after init
@@ -250,6 +271,7 @@ defmodule LED.PatternTest do
     end
 
     test "changes overlapping? of the pattern" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, overlapping?: false})
 
       assert %{overlapping?: false} = :sys.get_state(Pattern)
@@ -258,6 +280,7 @@ defmodule LED.PatternTest do
     end
 
     test "changes the resets of the pattern" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, resets: [100, 200]})
 
       assert %{resets: [200]} = :sys.get_state(Pattern)
@@ -266,6 +289,7 @@ defmodule LED.PatternTest do
     end
 
     test "does NOT change resets to nil if resets are not given as an opt" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, resets: [100, 200]})
 
       assert %{resets: [200]} = :sys.get_state(Pattern)
@@ -275,6 +299,7 @@ defmodule LED.PatternTest do
     end
 
     test "if resets are changed from nil to something, initial :reset message is processed" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, resets: nil})
 
       assert %{resets: nil} = :sys.get_state(Pattern)
@@ -283,6 +308,7 @@ defmodule LED.PatternTest do
     end
 
     test "if resets are changed to nil, it stays nil" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, resets: [5, 10]})
 
       assert %{resets: [10]} = :sys.get_state(Pattern)
@@ -307,6 +333,7 @@ defmodule LED.PatternTest do
     end
 
     test "handles overlapping? == true" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, overlapping?: true})
 
       # wait for 1 trigger (duration)
@@ -315,6 +342,7 @@ defmodule LED.PatternTest do
     end
 
     test "handles false overlapping? type" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, overlapping?: "not_boolean"})
 
       # wait for 1 trigger (duration)
@@ -323,6 +351,7 @@ defmodule LED.PatternTest do
     end
 
     test "handles :resets list" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, resets: [10, 30]})
 
       # first reset timer should be send in init
@@ -330,6 +359,7 @@ defmodule LED.PatternTest do
     end
 
     test ":resets reset durations" do
+      start_link_supervised!(LED)
       start_link_supervised!({Pattern, durations: [6, 7, 8], resets: [3, 30]})
 
       # first duration and reset_point should be used immediately

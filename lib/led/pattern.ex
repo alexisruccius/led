@@ -10,13 +10,15 @@ defmodule LED.Pattern do
 
   ## Example
 
-  Start a pattern with default timings:
+  Start a pattern with default timings (start LED first):
 
-      iex> {:ok, _pid} = LED.Pattern.start_link()
+      iex> {:ok, _pid_led} = LED.start_link()
+      iex> {:ok, _pid_pattern} = LED.Pattern.start_link()
 
   Start with custom intervals and durations:
 
-      iex> {:ok, _pid} = LED.Pattern.start_link(
+      iex> {:ok, _pid_led} = LED.start_link(name: :my_led)
+      iex> {:ok, _pid_pattern} = LED.Pattern.start_link(
       ...> led_name: :my_led,
       ...> intervals: [100, 50, 200],
       ...> durations: [500, 800]
@@ -55,6 +57,7 @@ defmodule LED.Pattern do
   @doc """
   Starts the LED.Pattern GenServer.
 
+  Returns `{:ok, pid}`, or `{:error, :no_led_process}` if no LED process is started.
 
   ## Options
 
@@ -67,26 +70,27 @@ defmodule LED.Pattern do
     * `:resets` – list of times in ms when the pattern sequence resets.
       If `nil` (default), the pattern runs continuously without resets.
 
-
   ## Examples
 
-      iex> {:ok, _pid} = LED.Pattern.start_link()
+      iex> {:ok, _pid_led} = LED.start_link()
+      iex> {:ok, _pid_pattern} = LED.Pattern.start_link()
 
-      iex> {:ok, _pid} = LED.Pattern.start_link(
+      iex> {:ok, _pid_led} = LED.start_link(name: :red_led)
+      iex> {:ok, _pid_pattern} = LED.Pattern.start_link(
       ...> led_name: :red_led,
       ...> intervals: [169, 69],
       ...> durations: [600, 900]
       ...> )
 
-      iex> LED.Pattern.start_link(
+      iex> {:ok, _pid_led} = LED.start_link(name: :green_led)
+      iex> {:ok, _pid_pattern} = LED.Pattern.start_link(
       ...> name: :green_sparkle,
       ...> led_name: :green_led,
       ...> intervals: [100, 200],
       ...> durations: [300, 400],
       ...> overlapping?: true
       ...> )
-
-      iex> LED.Pattern.start_link(
+      iex> {:ok, _pid_pattern} = LED.Pattern.start_link(
       ...> name: :green_beat,
       ...> led_name: :green_led,
       ...> intervals: [20, 40, 80],
@@ -94,13 +98,23 @@ defmodule LED.Pattern do
       ...> overlapping?: true
       ...> )
 
+      iex> LED.Pattern.start_link(led_name: :does_not_exist)
+      {:error, :no_led_process}
+
   ...>
   """
   @doc since: "0.2.0"
-  @spec start_link(options()) :: GenServer.on_start()
+  @spec start_link(options()) :: GenServer.on_start() | {:error, :no_led_process}
   def start_link(args \\ []) do
     name = Keyword.get(args, :name, __MODULE__)
-    GenServer.start_link(__MODULE__, args, name: name)
+    led_name = Keyword.get(args, :led_name, %__MODULE__{}.led_name)
+
+    if led_name |> Process.whereis() |> is_pid() do
+      GenServer.start_link(__MODULE__, args, name: name)
+    else
+      Logger.warning("No process found for :led_name #{led_name}. Start the LED GenServer first.")
+      {:error, :no_led_process}
+    end
   end
 
   @doc """
