@@ -201,6 +201,11 @@ defmodule LED do
   @gpio_pin "GPIO22"
   @initial_value 1
 
+  @spec child_spec(list()) :: Supervisor.child_spec()
+  def child_spec(options) do
+    %{id: Keyword.get(options, :name, __MODULE__), start: {__MODULE__, :start_link, [options]}}
+  end
+
   @doc """
   Starts the LED GenServer.
 

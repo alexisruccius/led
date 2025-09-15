@@ -218,12 +218,13 @@ defmodule LED.PatternTest do
 
   describe "change/1" do
     test "changes led_name of the pattern" do
+      start_link_supervised!({LED, name: :brown_led, gpio_pin: "GPIO24"})
       start_link_supervised!({LED, name: :red_led})
       start_link_supervised!({Pattern, led_name: :red_led})
 
       assert %{led_name: :red_led} = :sys.get_state(Pattern)
-      Pattern.change(led_name: :green_led)
-      assert %{led_name: :green_led} = :sys.get_state(Pattern)
+      assert :ok = Pattern.change(led_name: :brown_led)
+      assert %{led_name: :brown_led} = :sys.get_state(Pattern)
     end
 
     test "changes the intervals of the pattern" do
@@ -232,7 +233,7 @@ defmodule LED.PatternTest do
 
       # first interval used immediately after init
       assert %{intervals: [20]} = :sys.get_state(Pattern)
-      Pattern.change(intervals: [6])
+      assert :ok = Pattern.change(intervals: [6])
       assert %{intervals: [6]} = :sys.get_state(Pattern)
       assert %{program: %{intervals: [6]}} = :sys.get_state(Pattern)
     end
@@ -243,7 +244,7 @@ defmodule LED.PatternTest do
 
       # first interval used immediately after init
       assert %{intervals: [15, 35]} = :sys.get_state(Pattern)
-      Pattern.change(overlapping?: true)
+      assert :ok = Pattern.change(overlapping?: true)
       assert %{intervals: [15, 35]} = :sys.get_state(Pattern)
       assert %{program: %{intervals: [5, 15, 35]}} = :sys.get_state(Pattern)
     end
@@ -254,7 +255,7 @@ defmodule LED.PatternTest do
 
       # first interval used immediately after init
       assert %{durations: [20]} = :sys.get_state(Pattern)
-      Pattern.change(durations: [6])
+      assert :ok = Pattern.change(durations: [6])
       assert %{durations: [6]} = :sys.get_state(Pattern)
       assert %{program: %{durations: [6]}} = :sys.get_state(Pattern)
     end
@@ -265,7 +266,7 @@ defmodule LED.PatternTest do
 
       # first interval used immediately after init
       assert %{durations: [20, 30]} = :sys.get_state(Pattern)
-      Pattern.change(overlapping?: true)
+      assert :ok = Pattern.change(overlapping?: true)
       assert %{durations: [20, 30]} = :sys.get_state(Pattern)
       assert %{program: %{durations: [10, 20, 30]}} = :sys.get_state(Pattern)
     end
@@ -275,7 +276,7 @@ defmodule LED.PatternTest do
       start_link_supervised!({Pattern, overlapping?: false})
 
       assert %{overlapping?: false} = :sys.get_state(Pattern)
-      Pattern.change(overlapping?: true)
+      assert :ok = Pattern.change(overlapping?: true)
       assert %{overlapping?: true} = :sys.get_state(Pattern)
     end
 
@@ -284,7 +285,7 @@ defmodule LED.PatternTest do
       start_link_supervised!({Pattern, resets: [100, 200]})
 
       assert %{resets: [200]} = :sys.get_state(Pattern)
-      Pattern.change(resets: [69, 269])
+      assert :ok = Pattern.change(resets: [69, 269])
       assert %{resets: [69, 269]} = :sys.get_state(Pattern)
     end
 
@@ -293,7 +294,7 @@ defmodule LED.PatternTest do
       start_link_supervised!({Pattern, resets: [100, 200]})
 
       assert %{resets: [200]} = :sys.get_state(Pattern)
-      Pattern.change(overlapping?: true)
+      assert :ok = Pattern.change(overlapping?: true)
       assert %{resets: [200]} = :sys.get_state(Pattern)
       assert %{program: %{resets: [100, 200]}} = :sys.get_state(Pattern)
     end
@@ -303,7 +304,7 @@ defmodule LED.PatternTest do
       start_link_supervised!({Pattern, resets: nil})
 
       assert %{resets: nil} = :sys.get_state(Pattern)
-      Pattern.change(resets: [69, 269])
+      assert :ok = Pattern.change(resets: [69, 269])
       assert %{resets: [269]} = :sys.get_state(Pattern)
     end
 
@@ -312,8 +313,12 @@ defmodule LED.PatternTest do
       start_link_supervised!({Pattern, resets: [5, 10]})
 
       assert %{resets: [10]} = :sys.get_state(Pattern)
-      Pattern.change(resets: nil)
+      assert :ok = Pattern.change(resets: nil)
       assert %{resets: nil} = :sys.get_state(Pattern)
+    end
+
+    test "returns error when no LED process with :led_name" do
+      assert {:error, :no_led_process} = Pattern.change(led_name: :led_module_not_started)
     end
   end
 

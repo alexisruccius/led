@@ -54,6 +54,11 @@ defmodule LED.Pattern do
           {:resets, [pos_integer()]}
         ]
 
+  @spec child_spec(list()) :: Supervisor.child_spec()
+  def child_spec(options) do
+    %{id: Keyword.get(options, :name, __MODULE__), start: {__MODULE__, :start_link, [options]}}
+  end
+
   @doc """
   Starts the LED.Pattern GenServer.
 
@@ -188,9 +193,16 @@ defmodule LED.Pattern do
      ...> resets: [1500, 2000]
      ...> )
   """
-  @spec change(GenServer.server(), options()) :: :ok
+  @spec change(GenServer.server(), options()) :: :ok | {:error, :no_led_process}
   def change(name \\ __MODULE__, opts) do
-    GenServer.cast(name, {:change, opts})
+    led_name = Keyword.get(opts, :led_name, :not_changed)
+
+    if led_name == :not_changed or led_name |> Process.whereis() |> is_pid() do
+      GenServer.cast(name, {:change, opts})
+    else
+      Logger.warning("No process found for :led_name #{led_name}. No changes made to pattern.")
+      {:error, :no_led_process}
+    end
   end
 
   # callbacks
