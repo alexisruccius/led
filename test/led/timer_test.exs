@@ -4,12 +4,20 @@ defmodule LED.TimerTest do
   alias LED.Timer
 
   describe "send_timer/1" do
-    test "when times == 0 do not start a timer" do
-      state = 1
+    test "when state == 0 and times == 0 do not start a timer" do
+      state = 0
       interval = 250
       timer = 0
       timer_ref = Timer.send_timer({state, interval, timer})
       assert timer_ref |> is_nil()
+    end
+
+    test "when state == 1 and times == 0 send last timer to set LED state == 0" do
+      state = 1
+      interval = 16
+      timer = 0
+      assert Timer.send_timer({state, interval, timer})
+      assert_receive {0, 16, 0}
     end
 
     test "when times == -1 sends message without modifying for infinite loop" do

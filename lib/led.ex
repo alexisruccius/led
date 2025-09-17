@@ -588,6 +588,9 @@ defmodule LED do
   defp send_timer(state, interval, times, timer_refs) do
     active_timer_refs = Enum.filter(timer_refs, &Process.read_timer/1)
 
-    [Timer.send_timer({state, interval, times}) | active_timer_refs]
+    case Timer.send_timer({state, interval, times}) do
+      ref when is_reference(ref) -> [ref | active_timer_refs]
+      _no_ref -> active_timer_refs
+    end
   end
 end

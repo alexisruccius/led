@@ -18,7 +18,8 @@ defmodule LED.Timer do
     - `times` is the number of remaining toggles; `-1` means infinite repeats.
 
   - If `times` is `-1`, schedules the timer infinitely.
-  - If `times` is `0`, does nothing (no timer scheduled).
+  - If `times` is `0` and `state` is `1`, sends immediately (1ms) a message that the LED state will be off (`0`).
+  - If `times` is `0` and `state` is `0`, does nothing (no timer scheduled).
 
   - If `state` is `0`, decrements `times` and schedules the next timer.
   - If `state` is `1`, schedules the next timer without decrementing `times`.
@@ -32,7 +33,8 @@ defmodule LED.Timer do
     send_after(message, interval)
   end
 
-  def send_timer({_state, _interval, times}) when times == 0, do: nil
+  def send_timer({1, interval, times}) when times == 0, do: send_after({0, interval, 0}, 1)
+  def send_timer({0, _interval, times}) when times == 0, do: nil
 
   def send_timer({0, interval, times}) do
     send_after({0, interval, times - 1}, interval)
